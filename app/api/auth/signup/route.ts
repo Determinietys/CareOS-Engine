@@ -31,9 +31,12 @@ async function handler(req: NextRequest) {
 
   const { name, email, password } = validation.data
 
+  // Normalize email (lowercase and trim)
+  const normalizedEmail = email.toLowerCase().trim()
+
   // Check if user already exists
   const existingUser = await prisma.user.findUnique({
-    where: { email },
+    where: { email: normalizedEmail },
   })
 
   if (existingUser) {
@@ -47,7 +50,7 @@ async function handler(req: NextRequest) {
   const user = await prisma.user.create({
     data: {
       name,
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       notificationSettings: {
         create: {},

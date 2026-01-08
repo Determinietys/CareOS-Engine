@@ -19,19 +19,33 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) {
+            console.log("[AUTH] Missing email or password")
             return null
           }
+
+          // Normalize email for lookup
+          const normalizedEmail = credentials.email.toLowerCase().trim()
+          console.log("[AUTH] Attempting login for:", normalizedEmail)
 
           const user = await prisma.user.findUnique({
-            where: { email: credentials.email },
+            where: { email: normalizedEmail },
           })
 
-          if (!user || !user.password) {
+          if (!user) {
+            console.log("[AUTH] User not found:", credentials.email)
             return null
           }
 
+          if (!user.password) {
+            console.log("[AUTH] User has no password set")
+            return null
+          }
+
+          console.log("[AUTH] User found, comparing password...")
           const isValid = await bcrypt.compare(credentials.password, user.password)
+          
           if (!isValid) {
+            console.log("[AUTH] Password comparison failed")
             // Log failed login attempt (non-blocking)
             prisma.loginHistory.create({
               data: {
@@ -44,6 +58,8 @@ export const authOptions: NextAuthOptions = {
             })
             return null
           }
+
+          console.log("[AUTH] Password valid, proceeding...")
 
           // Check MFA if enabled
           if (user.mfaEnabled) {

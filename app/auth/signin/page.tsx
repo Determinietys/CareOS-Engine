@@ -22,7 +22,7 @@ export default function SignInPage() {
 
     try {
       const result = await signIn("credentials", {
-        email,
+        email: email.toLowerCase().trim(),
         password,
         mfaCode: showMfa ? mfaCode : undefined,
         redirect: false,
