@@ -17,78 +17,98 @@ export const authOptions: NextAuthOptions = {
         mfaCode: { label: "MFA Code", type: "text", required: false },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email and password are required")
-        }
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            return null
+          }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        })
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+          })
 
-        if (!user || !user.password) {
-          throw new Error("Invalid credentials")
-        }
+          if (!user || !user.password) {
+            return null
+          }
 
-        const isValid = await bcrypt.compare(credentials.password, user.password)
-        if (!isValid) {
-          // Log failed login attempt
-          await prisma.loginHistory.create({
+          const isValid = await bcrypt.compare(credentials.password, user.password)
+          if (!isValid) {
+            // Log failed login attempt (non-blocking)
+            prisma.loginHistory.create({
+              data: {
+                userId: user.id,
+                success: false,
+                failureReason: "Invalid password",
+              },
+            }).catch((err) => {
+              console.error("Failed to log login history:", err)
+            })
+            return null
+          }
+
+          // Check MFA if enabled
+          if (user.mfaEnabled) {
+            if (!credentials.mfaCode) {
+              throw new Error("MFA code required")
+            }
+
+            if (!user.mfaSecret) {
+              throw new Error("MFA not properly configured")
+            }
+
+            const isValidMFA = verifyTOTP(credentials.mfaCode, user.mfaSecret)
+            if (!isValidMFA) {
+              // Check backup codes
+              const backupCodeIndex = user.mfaBackupCodes.indexOf(credentials.mfaCode)
+              if (backupCodeIndex === -1) {
+                prisma.loginHistory.create({
+                  data: {
+                    userId: user.id,
+                    success: false,
+                    failureReason: "Invalid MFA code",
+                  },
+                }).catch((err) => {
+                  console.error("Failed to log login history:", err)
+                })
+                throw new Error("Invalid MFA code")
+              }
+              // Remove used backup code
+              const updatedBackupCodes = [...user.mfaBackupCodes]
+              updatedBackupCodes.splice(backupCodeIndex, 1)
+              await prisma.user.update({
+                where: { id: user.id },
+                data: { mfaBackupCodes: updatedBackupCodes },
+              })
+            }
+          }
+
+          // Log successful login (non-blocking)
+          prisma.loginHistory.create({
             data: {
               userId: user.id,
-              success: false,
-              failureReason: "Invalid password",
+              success: true,
             },
+          }).catch((err) => {
+            console.error("Failed to log login history:", err)
           })
-          throw new Error("Invalid credentials")
-        }
 
-        // Check MFA if enabled
-        if (user.mfaEnabled) {
-          if (!credentials.mfaCode) {
-            throw new Error("MFA code required")
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
           }
-
-          if (!user.mfaSecret) {
-            throw new Error("MFA not properly configured")
+        } catch (error) {
+          // Re-throw MFA errors so they can be handled specially
+          if (error instanceof Error && (
+            error.message === "MFA code required" ||
+            error.message === "MFA not properly configured" ||
+            error.message === "Invalid MFA code"
+          )) {
+            throw error
           }
-
-          const isValidMFA = verifyTOTP(credentials.mfaCode, user.mfaSecret)
-          if (!isValidMFA) {
-            // Check backup codes
-            const backupCodeIndex = user.mfaBackupCodes.indexOf(credentials.mfaCode)
-            if (backupCodeIndex === -1) {
-              await prisma.loginHistory.create({
-                data: {
-                  userId: user.id,
-                  success: false,
-                  failureReason: "Invalid MFA code",
-                },
-              })
-              throw new Error("Invalid MFA code")
-            }
-            // Remove used backup code
-            const updatedBackupCodes = [...user.mfaBackupCodes]
-            updatedBackupCodes.splice(backupCodeIndex, 1)
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { mfaBackupCodes: updatedBackupCodes },
-            })
-          }
-        }
-
-        // Log successful login
-        await prisma.loginHistory.create({
-          data: {
-            userId: user.id,
-            success: true,
-          },
-        })
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
+          // For other errors, return null (invalid credentials)
+          console.error("Auth error:", error)
+          return null
         }
       },
     }),

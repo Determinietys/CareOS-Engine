@@ -29,14 +29,22 @@ export default function SignInPage() {
       })
 
       if (result?.error) {
+        console.error("Sign in error:", result.error)
         if (result.error === "MFA code required") {
           setShowMfa(true)
         } else {
-          setError(result.error)
+          // Provide more user-friendly error messages
+          if (result.error.includes("Invalid credentials") || result.error.includes("CredentialsSignin")) {
+            setError("Invalid email or password. Please check your credentials and try again.")
+          } else {
+            setError(result.error)
+          }
         }
       } else if (result?.ok) {
         router.push("/")
         router.refresh()
+      } else {
+        setError("An unexpected error occurred. Please try again.")
       }
     } catch (err) {
       setError("An error occurred. Please try again.")
