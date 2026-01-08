@@ -16,7 +16,7 @@ import React, { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { 
   Heart, Zap, Home, Settings, Menu, X, Thermometer, ListTodo, 
-  PhoneCall, DollarSign, HelpCircle, Link, Database, Activity,
+  PhoneCall, DollarSign, HelpCircle, Link as LinkIcon, Database, Activity,
   Sparkles, Send, Loader2, UserCircle, Calendar, Users, FileText,
   Bell, Clock, Plus, Search, ChevronRight, Phone, Mail, MapPin,
   AlertCircle, CheckCircle2, Star, MessageSquare, Folder, Shield,
@@ -196,7 +196,7 @@ export default function CareOSUnified() {
         <NavItem icon={DollarSign} label="Financial" tab="financial" badge={groupedItems.financial?.length} />
         <NavItem icon={ListTodo} label="All Tasks" tab="tasks" />
         <NavItem icon={HelpCircle} label="HelperEngine" tab="helper" />
-        <NavItem icon={Link} label="Integrations" tab="integrations" />
+        <NavItem icon={LinkIcon} label="Integrations" tab="integrations" />
         <NavItem icon={Database} label="Data Intelligence" tab="data" />
       </nav>
 
@@ -385,7 +385,7 @@ export default function CareOSUnified() {
       case 'integrations':
         return (
           <div className="bg-violet-50 rounded-3xl p-12 text-center border border-violet-200">
-            <Link size={48} className="text-violet-400 mx-auto mb-4" />
+            <LinkIcon size={48} className="text-violet-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-stone-800 mb-2">Integration Hub</h3>
             <p className="text-stone-600 mb-6">Connect your calendars, health apps, and services</p>
             <Link

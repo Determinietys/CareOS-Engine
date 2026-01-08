@@ -16,7 +16,17 @@ export default async function Home() {
         <h1 className="text-4xl font-bold mb-6">Welcome to CareOS Engine</h1>
         <p className="text-lg mb-8">Your secure AI-driven system dashboard</p>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Link
+            href="/careos-unified"
+            className="p-6 border rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200"
+          >
+            <h2 className="text-xl font-semibold mb-2">CareOS Unified</h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Quick Capture, HelperEngine, Integrations & Data Intelligence
+            </p>
+          </Link>
+          
           <Link
             href="/settings"
             className="p-6 border rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
