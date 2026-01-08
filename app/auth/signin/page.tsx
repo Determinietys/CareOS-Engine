@@ -57,12 +57,15 @@ export default function SignInPage() {
     setLoading(true)
     setError("")
     try {
-      const result = await signIn("google", { 
+      // Try to sign in with Google OAuth
+      // If not configured, this will redirect to error page
+      await signIn("google", { 
         callbackUrl: "/",
-        redirect: true, // Let NextAuth handle redirect for OAuth
+        redirect: true, // OAuth requires redirect
       })
     } catch (err) {
-      setError("An error occurred with Google sign-in. Please try again or use email/password.")
+      // If error occurs before redirect, show message
+      setError("Google sign-in is not configured. Please use email/password to sign in.")
       setLoading(false)
     }
   }
