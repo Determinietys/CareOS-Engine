@@ -1,6 +1,6 @@
 # CareOS Engine
 
-A secure, AI-driven user management and authentication system built with Next.js, NextAuth, and PostgreSQL.
+A secure, AI-driven SMS-first healthcare coordination platform built with Next.js, NextAuth, PostgreSQL, Twilio, and Claude AI.
 
 ## Features
 
@@ -39,11 +39,23 @@ A secure, AI-driven user management and authentication system built with Next.js
 - ✅ Language selection
 - ✅ Timezone setting
 
+### SMS-First Healthcare Platform
+- ✅ SMS onboarding flow (5-step, TCPA compliant)
+- ✅ WhatsApp integration with media support
+- ✅ AI message classification (Claude API)
+- ✅ Multi-language support (8+ languages)
+- ✅ Lead generation engine with partner referrals
+- ✅ Health timeline and captured items dashboard
+- ✅ Mandatory keyword handling (STOP, HELP, START)
+- ✅ International support (180+ countries)
+
 ## Tech Stack
 
 - **Framework**: Next.js 14 (App Router)
 - **Authentication**: NextAuth.js
 - **Database**: PostgreSQL with Prisma ORM
+- **SMS/WhatsApp**: Twilio
+- **AI**: Claude API (Anthropic)
 - **Styling**: Tailwind CSS
 - **Validation**: Zod
 - **Testing**: Jest, React Testing Library
@@ -77,11 +89,32 @@ cp .env.example .env
 
 Edit `.env` with your configuration:
 ```env
+# Database
 DATABASE_URL="postgresql://user:password@localhost:5432/careos"
+
+# NextAuth
 NEXTAUTH_SECRET="your-secret-key-here"
 NEXTAUTH_URL="http://localhost:3000"
+
+# OAuth (Optional)
 GOOGLE_CLIENT_ID="your-google-client-id"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
+
+# Twilio SMS Platform
+TWILIO_ACCOUNT_SID="your-twilio-account-sid"
+TWILIO_AUTH_TOKEN="your-twilio-auth-token"
+TWILIO_PHONE_NUMBER="+1234567890"
+TWILIO_WHATSAPP_NUMBER="+1234567890"
+TWILIO_MESSAGING_SERVICE_SID="your-messaging-service-sid"
+
+# Anthropic (Claude API)
+ANTHROPIC_API_KEY="your-anthropic-api-key"
+
+# Security
+PHONE_HASH_SALT="generate-random-salt-for-phone-hashing"
+
+# App
+BASE_URL="http://localhost:3000"
 ```
 
 4. Set up the database:

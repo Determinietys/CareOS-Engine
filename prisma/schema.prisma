@@ -11,19 +11,19 @@ datasource db {
 }
 
 model Account {
-  id                String    @id @default(cuid())
+  id                String  @id @default(cuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String?   @db.Text
-  access_token      String?   @db.Text
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String?   @db.Text
+  id_token          String? @db.Text
   session_state     String?
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@index([userId])
@@ -44,30 +44,40 @@ model Session {
 }
 
 model User {
-  id                    String    @id @default(cuid())
-  name                  String?
-  email                 String    @unique
-  emailVerified         DateTime?
-  password              String?
-  image                 String?
-  phone                 String?
-  phoneVerified         Boolean   @default(false)
-  mfaEnabled            Boolean   @default(false)
-  mfaSecret             String?
-  mfaBackupCodes        String[]  @default([])
-  theme                 String    @default("system") // light, dark, system
-  language              String    @default("en")
-  timezone              String    @default("UTC")
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  accounts              Account[]
-  sessions              Session[]
-  loginHistory          LoginHistory[]
-  notifications         Notification[]
-  notificationSettings  NotificationSettings?
-  privacySettings       PrivacySettings?
-  subscription          Subscription?
-  invoices              Invoice[]
+  id                   String                @id @default(cuid())
+  name                 String?
+  email                String?               @unique
+  emailVerified        DateTime?
+  password             String?
+  image                String?
+  phone                String?               @unique
+  phoneVerified        Boolean               @default(false)
+  mfaEnabled           Boolean               @default(false)
+  mfaSecret            String?
+  mfaBackupCodes       String[]              @default([])
+  theme                String                @default("system") // light, dark, system
+  language             String                @default("en")
+  timezone             String                @default("UTC")
+  // SMS-specific fields
+  preferredChannel     String                @default("sms") // 'sms' or 'whatsapp'
+  status               String                @default("onboarding") // 'onboarding', 'active', 'opted_out'
+  onboardingStep       String? // 'consent', 'name', 'email', 'password', 'complete'
+  appLinked            Boolean               @default(false)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  accounts             Account[]
+  sessions             Session[]
+  loginHistory         LoginHistory[]
+  notifications        Notification[]
+  notificationSettings NotificationSettings?
+  privacySettings      PrivacySettings?
+  subscription         Subscription?
+  invoices             Invoice[]
+  // SMS relations
+  consentRecords       ConsentRecord[]
+  messages             Message[]
+  capturedItems        CapturedItem[]
+  leads                Lead[]
 }
 
 model VerificationToken {
@@ -79,34 +89,34 @@ model VerificationToken {
 }
 
 model LoginHistory {
-  id          String   @id @default(cuid())
-  userId      String
-  ipAddress   String?
-  userAgent   String?
-  success     Boolean
+  id            String   @id @default(cuid())
+  userId        String
+  ipAddress     String?
+  userAgent     String?
+  success       Boolean
   failureReason String?
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([createdAt])
 }
 
 model NotificationSettings {
-  id                    String   @id @default(cuid())
-  userId                String   @unique
-  emailMarketing        Boolean  @default(true)
-  emailTransactional    Boolean  @default(true)
-  emailUpdates          Boolean  @default(true)
-  pushEnabled           Boolean  @default(true)
-  inAppEnabled          Boolean  @default(true)
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String  @id @default(cuid())
+  userId             String  @unique
+  emailMarketing     Boolean @default(true)
+  emailTransactional Boolean @default(true)
+  emailUpdates       Boolean @default(true)
+  pushEnabled        Boolean @default(true)
+  inAppEnabled       Boolean @default(true)
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Notification {
   id        String   @id @default(cuid())
   userId    String
-  type      String   // marketing, transactional, update
+  type      String // marketing, transactional, update
   title     String
   message   String   @db.Text
   read      Boolean  @default(false)
@@ -117,44 +127,150 @@ model Notification {
 }
 
 model PrivacySettings {
-  id                String   @id @default(cuid())
-  userId            String   @unique
-  profileVisibility String   @default("private") // public, private, friends
-  dataSharing       Boolean  @default(false)
-  analyticsEnabled  Boolean  @default(true)
-  cookiesAccepted   Boolean  @default(false)
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  profileVisibility String    @default("private") // public, private, friends
+  dataSharing       Boolean   @default(false)
+  analyticsEnabled  Boolean   @default(true)
+  cookiesAccepted   Boolean   @default(false)
   cookiesAcceptedAt DateTime?
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Subscription {
-  id                String   @id @default(cuid())
-  userId            String   @unique
-  tier              String   @default("free") // free, basic, premium
-  status            String   // active, canceled, past_due
-  stripeCustomerId String?  @unique
-  stripeSubscriptionId String? @unique
-  currentPeriodEnd DateTime?
-  cancelAtPeriodEnd Boolean  @default(false)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  invoices          Invoice[]
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  tier                 String    @default("free") // free, basic, premium
+  status               String // active, canceled, past_due
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices             Invoice[]
 }
 
 model Invoice {
-  id                String   @id @default(cuid())
-  userId            String
-  subscriptionId    String
-  stripeInvoiceId  String?  @unique
-  amount            Int      // in cents
-  currency          String   @default("usd")
-  status            String   // paid, pending, failed
-  pdfUrl            String?
-  createdAt         DateTime @default(now())
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subscription      Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  id              String       @id @default(cuid())
+  userId          String
+  subscriptionId  String
+  stripeInvoiceId String?      @unique
+  amount          Int // in cents
+  currency        String       @default("usd")
+  status          String // paid, pending, failed
+  pdfUrl          String?
+  createdAt       DateTime     @default(now())
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
+// SMS Platform Models
+
+model ConsentRecord {
+  id               String   @id @default(cuid())
+  userId           String?
+  phone            String   @db.Text
+  consentType      String   @db.Text // 'double_opt_in', 'opt_out'
+  consentLanguage  String   @db.Text // Exact message shown
+  userResponse     String?  @db.Text
+  language         String   @default("en")
+  channel          String   @db.Text // 'sms' or 'whatsapp'
+  carrierName      String?  @db.Text
+  twilioMessageSid String?  @db.Text
+  ipAddress        String?  @db.Text
+  createdAt        DateTime @default(now())
+  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([phone])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  userId    String?
+  direction String   @db.Text // 'inbound', 'outbound'
+  channel   String   @db.Text // 'sms', 'whatsapp'
+  body      String   @db.Text
+  mediaUrl  String?  @db.Text
+  mediaType String?  @db.Text
+  twilioSid String?  @unique @db.Text
+  status    String?  @db.Text
+  cost      Decimal? @db.Decimal(10, 6)
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([twilioSid])
+}
+
+model CapturedItem {
+  id           String   @id @default(cuid())
+  userId       String
+  category     String   @db.Text // 'health', 'task', 'appointment', 'medication', etc.
+  title        String   @db.Text
+  details      String?  @db.Text
+  person       String?  @db.Text
+  urgency      String   @default("low") // 'low', 'medium', 'high'
+  originalText String   @db.Text
+  language     String   @default("en")
+  source       String   @default("sms") // 'sms', 'whatsapp', 'app'
+  aiConfidence Float?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model Lead {
+  id               String    @id @default(cuid())
+  userId           String?
+  phoneHash        String    @db.Text
+  category         String    @db.Text // 'caregiver_hiring', 'telehealth', etc.
+  partnerName      String?   @db.Text
+  needDescription  String    @db.Text
+  leadDetails      Json? // JSONB for flexible structure
+  locationState    String?   @db.Text
+  urgency          String?   @db.Text
+  consentGiven     Boolean   @default(false)
+  consentTimestamp DateTime?
+  status           String    @default("captured") // 'captured', 'consented', 'distributed', 'declined'
+  leadValue        Decimal?  @db.Decimal(10, 2)
+  createdAt        DateTime  @default(now())
+  user             User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([category])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SuppressionList {
+  id        String   @id @default(cuid())
+  phone     String   @unique @db.Text
+  reason    String   @db.Text
+  channel   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+}
+
+model UnmatchedDemand {
+  id              String   @id @default(cuid())
+  needDescription String   @db.Text
+  categoryGuess   String?  @db.Text
+  frequency       Int      @default(1)
+  sampleMessages  String[] @default([])
+  firstSeen       DateTime @default(now())
+  lastSeen        DateTime @default(now())
+
+  @@index([categoryGuess])
+  @@index([lastSeen])
+}
