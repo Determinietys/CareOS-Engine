@@ -78,6 +78,8 @@ model User {
   messages             Message[]
   capturedItems        CapturedItem[]
   leads                Lead[]
+  // Vendor relations
+  vendor               Vendor?
 }
 
 model VerificationToken {
@@ -241,8 +243,13 @@ model Lead {
   urgency          String?   @db.Text
   consentGiven     Boolean   @default(false)
   consentTimestamp DateTime?
-  status           String    @default("captured") // 'captured', 'consented', 'distributed', 'declined'
+  status           String    @default("captured") // 'captured', 'consented', 'distributed', 'declined', 'accepted'
   leadValue        Decimal?  @db.Decimal(10, 2)
+  // Vendor acceptance
+  acceptedByVendorId String?  @db.Text
+  acceptedAt        DateTime?
+  calendarInviteUrl String?   @db.Text
+  meetingScheduledAt DateTime?
   createdAt        DateTime  @default(now())
   user             User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -250,6 +257,31 @@ model Lead {
   @@index([category])
   @@index([status])
   @@index([createdAt])
+  @@index([acceptedByVendorId])
+}
+
+model Vendor {
+  id                String   @id @default(cuid())
+  userId            String   @unique // Vendor account (User)
+  businessName      String   @db.Text
+  description       String?  @db.Text
+  category          String   @db.Text // 'caregiver_hiring', 'telehealth', 'medical_equipment', etc.
+  subscriptionTier  String   @default("free") // 'free', 'basic', 'premium', 'enterprise'
+  verified          Boolean  @default(false)
+  rating            Float?   @default(0)
+  totalLeads        Int      @default(0)
+  acceptedLeads     Int      @default(0)
+  email             String?  @db.Text
+  phone             String?  @db.Text
+  website           String?  @db.Text
+  calendarUrl       String?  @db.Text // Google Calendar, Calendly, etc.
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([category])
+  @@index([subscriptionTier])
+  @@index([verified])
 }
 
 model SuppressionList {
