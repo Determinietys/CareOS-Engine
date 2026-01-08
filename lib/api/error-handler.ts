@@ -52,12 +52,14 @@ export function withErrorHandling(
  * Ensure user is authenticated
  */
 export async function requireAuth(request: NextRequest) {
-  const session = await import("next-auth").then(m => 
-    m.getServerSession(await import("@/lib/auth").then(m => m.authOptions))
-  )
+  const { getServerSession } = await import("next-auth")
+  const { authOptions } = await import("@/lib/auth")
+  const { Errors } = await import("@/lib/errors")
+  
+  const session = await getServerSession(authOptions)
 
   if (!session) {
-    throw new (await import("@/lib/errors")).Errors.auth.required()
+    throw Errors.auth.required()
   }
 
   return session
