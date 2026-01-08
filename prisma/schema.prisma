@@ -306,3 +306,64 @@ model UnmatchedDemand {
   @@index([categoryGuess])
   @@index([lastSeen])
 }
+
+// Advanced Features Models
+
+model VoiceCall {
+  id                String   @id @default(cuid())
+  phone             String   @db.Text
+  callSid           String   @unique @db.Text
+  type              String   @db.Text // 'otp', 'notification', 'reminder'
+  language          String   @default("en")
+  status            String   @default("initiated") // 'initiated', 'ringing', 'in-progress', 'completed', 'busy', 'failed', 'no-answer'
+  answeredBy        String?  @db.Text // 'human', 'machine_start', 'machine_end_beep'
+  voicemailDetected Boolean  @default(false)
+  duration          Int?     // seconds
+  cost              Decimal? @db.Decimal(10, 6)
+  createdAt         DateTime @default(now())
+  completedAt       DateTime?
+
+  @@index([phone])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Experiment {
+  id        String   @id @default(cuid())
+  name      String   @db.Text
+  status    String   @default("draft") // 'draft', 'running', 'paused', 'completed'
+  config    Json     // Experiment configuration
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  assignments ExperimentAssignment[]
+  metrics   ExperimentMetric[]
+
+  @@index([status])
+}
+
+model ExperimentAssignment {
+  id           String   @id @default(cuid())
+  experimentId String
+  userId       String   @db.Text
+  variantId    String   @db.Text
+  assignedAt   DateTime @default(now())
+  experiment   Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+
+  @@unique([experimentId, userId])
+  @@index([experimentId])
+  @@index([userId])
+}
+
+model ExperimentMetric {
+  id           String   @id @default(cuid())
+  experimentId String
+  variantId    String   @db.Text
+  userId       String?  @db.Text
+  metric       String   @db.Text
+  value        Float    @default(1)
+  timestamp    DateTime @default(now())
+  experiment   Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+
+  @@index([experimentId, variantId, metric])
+  @@index([timestamp])
+}

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { SMSButton } from '@/components/SMSButton';
 
 export default function LandingPage() {
   const [channel, setChannel] = useState<'sms' | 'whatsapp'>('sms');
@@ -117,19 +118,21 @@ export default function LandingPage() {
         </div>
 
         {/* CTAs */}
-        <div className="max-w-md mx-auto flex flex-col sm:flex-row gap-4 mb-8">
-          <a
-            href={`${channel === 'sms' ? 'sms' : 'whatsapp'}:${phoneNumbers[region]?.[channel]?.replace(/\s/g, '') || phoneNumbers.us.sms?.replace(/\s/g, '')}`}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg text-center transition-colors shadow-lg"
-          >
-            {channel === 'sms' ? '📱 Open Messages' : '💬 Open WhatsApp'}
-          </a>
-          <Link
-            href="/demo"
-            className="flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-semibold py-3 px-6 rounded-lg text-center transition-colors"
-          >
-            🎮 Try Demo
-          </Link>
+        <div className="max-w-md mx-auto mb-8">
+          <SMSButton
+            phone={phoneNumbers[region]?.[channel]?.replace(/\s/g, '') || phoneNumbers.us.sms?.replace(/\s/g, '') || ''}
+            message="HI"
+            showWhatsApp={channel === 'whatsapp'}
+            buttonText={channel === 'sms' ? '📱 Open Messages' : '💬 Open WhatsApp'}
+          />
+          <div className="mt-4">
+            <Link
+              href="/demo"
+              className="block w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-semibold py-3 px-6 rounded-lg text-center transition-colors"
+            >
+              🎮 Try Demo
+            </Link>
+          </div>
         </div>
         <div className="max-w-md mx-auto mb-8 flex gap-4 justify-center">
           <Link
