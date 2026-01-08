@@ -182,8 +182,8 @@ export default function SignInPage() {
             </button>
           </div>
 
-          {/* Google OAuth - only show if configured */}
-          {isGoogleOAuthEnabled && (
+          {/* Google OAuth - only show if configured and status checked */}
+          {oauthStatusChecked && isGoogleOAuthEnabled && (
             <div className="mt-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
