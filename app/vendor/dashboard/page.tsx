@@ -10,6 +10,13 @@ interface Lead {
   category: string;
   needDescription: string;
   locationState: string | null;
+  country?: string | null;
+  countryName?: string | null;
+  city?: string | null;
+  region?: string | null;
+  budget?: number | null;
+  budgetUSD?: number | null;
+  currency?: string | null;
   urgency: string | null;
   status: string;
   leadValue: number | null;
@@ -139,12 +146,21 @@ export default function VendorDashboard() {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="mb-6">
-          <Link
-            href="/"
-            className="text-blue-600 dark:text-blue-400 hover:underline mb-4 inline-block"
-          >
-            ← Back to Home
-          </Link>
+          <div className="flex items-center gap-4 mb-4">
+            <Link
+              href="/"
+              className="text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              ← Back to Home
+            </Link>
+            <span className="text-gray-400">|</span>
+            <Link
+              href="/vendor/settings"
+              className="text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Settings
+            </Link>
+          </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             Vendor Dashboard
           </h1>

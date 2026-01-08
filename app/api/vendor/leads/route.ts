@@ -70,11 +70,35 @@ export async function GET(req: NextRequest) {
     }
 
     // Use geographic matching to find leads for this vendor
-    const leads = await findLeadsForVendor(vendor.id, {
-      category: subscriptionTier !== 'enterprise' && vendor.category !== 'general' ? vendor.category : filters?.category,
-      country: filters?.country,
-      city: filters?.city,
-    });
+    let leads;
+    try {
+      leads = await findLeadsForVendor(vendor.id, {
+        category: subscriptionTier !== 'enterprise' && vendor.category !== 'general' ? vendor.category : filters?.category,
+        country: filters?.country,
+        city: filters?.city,
+      });
+    } catch (error) {
+      // Fallback to basic query if geographic matching fails
+      console.error('Geographic matching error, falling back to basic query:', error);
+      
+      // Limit based on tier
+      const take = subscriptionTier === 'enterprise' ? 1000 : subscriptionTier === 'premium' ? 100 : subscriptionTier === 'basic' ? 20 : 5;
+
+      leads = await prisma.lead.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              name: true,
+              phone: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+      });
+    }
 
     // Limit based on tier
     const take = subscriptionTier === 'enterprise' ? 1000 : subscriptionTier === 'premium' ? 100 : subscriptionTier === 'basic' ? 20 : 5;
