@@ -19,6 +19,8 @@ export async function GET(req: NextRequest) {
     const query = searchParams.get('q') || '';
     const category = searchParams.get('category') || null;
     const location = searchParams.get('location') || null;
+    const country = searchParams.get('country') || null;
+    const city = searchParams.get('city') || null;
 
     // Build search query
     const where: any = {
@@ -34,6 +36,14 @@ export async function GET(req: NextRequest) {
 
     if (location) {
       where.locationState = location;
+    }
+
+    if (country) {
+      where.country = country;
+    }
+
+    if (city) {
+      where.city = city;
     }
 
     if (query) {
@@ -65,6 +75,13 @@ export async function GET(req: NextRequest) {
         category: lead.category,
         needDescription: lead.needDescription,
         locationState: lead.locationState,
+        country: lead.country,
+        countryName: lead.countryName,
+        city: lead.city,
+        region: lead.region,
+        budget: lead.budget ? Number(lead.budget) : null,
+        budgetUSD: lead.budgetUSD ? Number(lead.budgetUSD) : null,
+        currency: lead.currency,
         urgency: lead.urgency,
         status: lead.status,
         leadValue: lead.leadValue ? Number(lead.leadValue) : null,

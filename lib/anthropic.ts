@@ -103,7 +103,16 @@ Return JSON:
   "isLeadOpportunity": true/false,
   "leadCategory": "category or null",
   "leadPartner": "partner name or null",
-  "askConsent": true/false
+  "askConsent": true/false,
+  "location": {
+    "country": "ISO country code (e.g., NG, US, GB) or null",
+    "city": "city name or null",
+    "region": "state/province/region or null"
+  },
+  "budget": {
+    "amount": number or null,
+    "currency": "ISO currency code (e.g., NGN, USD, GBP) or null"
+  }
 }
 
 Message: "${text}"`;

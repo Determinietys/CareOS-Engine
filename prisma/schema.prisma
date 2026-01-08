@@ -239,7 +239,18 @@ model Lead {
   partnerName      String?   @db.Text
   needDescription  String    @db.Text
   leadDetails      Json? // JSONB for flexible structure
-  locationState    String?   @db.Text
+  locationState    String?   @db.Text // Legacy field
+  // Regional location data
+  country          String?   @db.Text // ISO country code (e.g., 'NG', 'US', 'GB')
+  countryName      String?   @db.Text // Full country name
+  region           String?   @db.Text // State/Province/Region
+  city             String?   @db.Text
+  latitude         Float?
+  longitude        Float?
+  timezone         String?   @db.Text
+  currency         String?   @db.Text // ISO currency code (e.g., 'NGN', 'USD', 'GBP')
+  budget           Decimal?  @db.Decimal(10, 2) // User's budget in their currency
+  budgetUSD        Decimal?  @db.Decimal(10, 2) // Budget converted to USD
   urgency          String?   @db.Text
   consentGiven     Boolean   @default(false)
   consentTimestamp DateTime?
@@ -258,6 +269,10 @@ model Lead {
   @@index([status])
   @@index([createdAt])
   @@index([acceptedByVendorId])
+  @@index([country])
+  @@index([city])
+  @@index([country, city])
+  @@index([country, category])
 }
 
 model Vendor {
@@ -275,6 +290,20 @@ model Vendor {
   phone             String?  @db.Text
   website           String?  @db.Text
   calendarUrl       String?  @db.Text // Google Calendar, Calendly, etc.
+  // Regional location data
+  country           String?  @db.Text // ISO country code
+  countryName       String?  @db.Text
+  region            String?  @db.Text // State/Province/Region
+  city              String?  @db.Text
+  address           String?  @db.Text
+  latitude          Float?
+  longitude         Float?
+  timezone          String?  @db.Text
+  currency          String?  @db.Text // ISO currency code
+  serviceRadius     Int?     // Service radius in kilometers (null = global)
+  serviceCountries  String[] @default([]) // Array of country codes they serve
+  minBudget         Decimal? @db.Decimal(10, 2) // Minimum budget they accept
+  maxBudget         Decimal? @db.Decimal(10, 2) // Maximum budget they handle
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -282,6 +311,10 @@ model Vendor {
   @@index([category])
   @@index([subscriptionTier])
   @@index([verified])
+  @@index([country])
+  @@index([city])
+  @@index([country, city])
+  @@index([country, category])
 }
 
 model SuppressionList {

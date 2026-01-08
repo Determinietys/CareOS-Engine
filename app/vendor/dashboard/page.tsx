@@ -296,10 +296,23 @@ export default function VendorDashboard() {
                         {lead.needDescription}
                       </h3>
                       <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                        {lead.locationState && (
+                        {(lead.country || lead.city) && (
                           <div className="flex items-center gap-1">
                             <MapPin size={14} />
-                            {lead.locationState}
+                            {lead.city && lead.countryName
+                              ? `${lead.city}, ${lead.countryName}`
+                              : lead.countryName || lead.country || lead.locationState}
+                          </div>
+                        )}
+                        {lead.budget && lead.currency && (
+                          <div className="flex items-center gap-1 text-green-600 dark:text-green-400 font-medium">
+                            <DollarSign size={14} />
+                            {lead.currency} {lead.budget.toFixed(2)}
+                            {lead.budgetUSD && (
+                              <span className="text-xs text-gray-500 ml-1">
+                                (${lead.budgetUSD.toFixed(2)})
+                              </span>
+                            )}
                           </div>
                         )}
                         <div className="flex items-center gap-1">

@@ -11,6 +11,11 @@ import {
 import { classifySMS } from '@/lib/anthropic';
 import { handleOnboarding, sendResponse, handleOptOut, hashPhone } from '@/lib/sms-flows';
 import { getLeadPartner, generateLeadConsentMessage } from '@/lib/leads';
+import { getExperimentContent, trackExperimentMetric } from '@/lib/ab-testing';
+import { detectLanguage as detectLanguageAdvanced } from '@/lib/language-detection';
+import { generateMultilingualResponse } from '@/lib/multilingual-ai';
+import { extractLocation, extractBudgetFromText } from '@/lib/location-extraction';
+import { matchVendorsToLead } from '@/lib/geographic-matching';
 
 /**
  * Twilio webhook handler for incoming SMS/WhatsApp messages
@@ -134,7 +139,16 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      const consentMsg = getLocalizedMessage('consent', language);
+      // Get A/B test consent message
+      const consentMsg = await getExperimentContent(
+        'onboarding-consent-v2',
+        user.id,
+        language
+      ) || getLocalizedMessage('consent', language);
+      
+      // Track message shown
+      await trackExperimentMetric('onboarding-consent-v2', user.id, 'message_shown');
+      
       await sendResponse(phone, channel, consentMsg);
       
       // Store inbound message
@@ -183,8 +197,16 @@ export async function POST(req: NextRequest) {
       return new NextResponse('', { status: 200 });
     }
 
-    // Active user - classify and respond
-    const classification = await classifySMS(message, user.name, user.language);
+    // Active user - classify and respond with multilingual AI
+    const aiResponse = await generateMultilingualResponse(message, {
+      userName: user.name,
+      language: user.language,
+    });
+    
+    const classification = {
+      ...aiResponse.classification,
+      response: aiResponse.response,
+    };
 
     // Store captured item
     await prisma.capturedItem.create({
@@ -204,11 +226,30 @@ export async function POST(req: NextRequest) {
 
     // Handle lead opportunity
     if (classification.isLeadOpportunity && classification.leadCategory) {
+      // Extract location and budget
+      const locationData = await extractLocation(phone, message, {
+        country: (classification as any).location?.country,
+        city: (classification as any).location?.city,
+        region: (classification as any).location?.region,
+      });
+
+      const budgetData = extractBudgetFromText(
+        message,
+        (classification as any).budget?.currency || locationData.currency
+      );
+
+      // If budget not in message, check classification
+      if (!budgetData.budget && (classification as any).budget?.amount) {
+        budgetData.budget = (classification as any).budget.amount;
+        budgetData.currency = (classification as any).budget.currency || locationData.currency;
+        budgetData.budgetUSD = budgetData.budget; // Simplified - should convert properly
+      }
+
       const partner = getLeadPartner(classification.leadCategory);
       
       if (partner) {
-        // Create lead record
-        await prisma.lead.create({
+        // Create lead record with location and budget
+        const lead = await prisma.lead.create({
           data: {
             userId: user.id,
             phoneHash: hashPhone(phone),
@@ -222,8 +263,46 @@ export async function POST(req: NextRequest) {
             urgency: classification.urgency,
             status: 'captured',
             leadValue: partner.value,
+            // Location data
+            country: locationData.country,
+            countryName: locationData.countryName,
+            region: locationData.region,
+            city: locationData.city,
+            latitude: locationData.latitude,
+            longitude: locationData.longitude,
+            timezone: locationData.timezone,
+            currency: budgetData.currency || locationData.currency,
+            budget: budgetData.budget ? Number(budgetData.budget) : undefined,
+            budgetUSD: budgetData.budgetUSD ? Number(budgetData.budgetUSD) : undefined,
           },
         });
+
+        // Try to match with regional vendors
+        if (locationData.country) {
+          const vendorMatches = await matchVendorsToLead(lead.id, {
+            country: locationData.country,
+            city: locationData.city,
+            category: classification.leadCategory,
+            budgetUSD: budgetData.budgetUSD ? Number(budgetData.budgetUSD) : undefined,
+          });
+
+          // Store top matches in lead details
+          if (vendorMatches.length > 0) {
+            await prisma.lead.update({
+              where: { id: lead.id },
+              data: {
+                leadDetails: {
+                  ...(lead.leadDetails as any),
+                  matchedVendors: vendorMatches.slice(0, 5).map((m) => ({
+                    vendorId: m.vendor.id,
+                    score: m.score,
+                    reasons: m.reasons,
+                  })),
+                },
+              },
+            });
+          }
+        }
 
         // Ask for consent
         if (classification.askConsent) {

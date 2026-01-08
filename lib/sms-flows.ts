@@ -3,6 +3,8 @@ import { sendSMS, sendWhatsApp, lookupPhoneNumber } from './twilio';
 import { getLocalizedMessage } from './language';
 import { createHash } from 'crypto';
 import bcrypt from 'bcryptjs';
+import { getExperimentContent, trackExperimentMetric } from './ab-testing';
+import { sendWithFallback } from './voice-fallback';
 
 /**
  * Handle 5-step SMS onboarding flow
@@ -22,31 +24,34 @@ export async function handleOnboarding(
     case 'consent': {
       // Step 1: User sent initial message, we sent consent. Now waiting for YES
       if (normalizedMessage === 'YES' || normalizedMessage === 'SÍ' || normalizedMessage === 'OUI' || normalizedMessage === 'JA' || normalizedMessage === 'SIM') {
-        // Log consent
-        const carrierInfo = user.phone ? await lookupPhoneNumber(user.phone) : null;
-        
-        await prisma.consentRecord.create({
-          data: {
-            userId: user.id,
-            phone: user.phone || '',
-            consentType: 'double_opt_in',
-            consentLanguage: getLocalizedMessage('consent', language),
-            userResponse: message,
-            language: user.language,
-            channel,
-            carrierName: carrierInfo?.carrier?.name || undefined,
-            twilioMessageSid: messageSid || undefined,
-            ipAddress,
-          },
-        });
+      // Log consent
+      const carrierInfo = user.phone ? await lookupPhoneNumber(user.phone) : null;
+      
+      // Track A/B test metric
+      await trackExperimentMetric('onboarding-consent-v2', user.id, 'consent_rate');
+      
+      await prisma.consentRecord.create({
+        data: {
+          userId: user.id,
+          phone: user.phone || '',
+          consentType: 'double_opt_in',
+          consentLanguage: getLocalizedMessage('consent', language),
+          userResponse: message,
+          language: user.language,
+          channel,
+          carrierName: carrierInfo?.carrier?.name || undefined,
+          twilioMessageSid: messageSid || undefined,
+          ipAddress,
+        },
+      });
 
-        // Move to step 2: Ask for name
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { onboardingStep: 'name' },
-        });
+      // Move to step 2: Ask for name
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { onboardingStep: 'name' },
+      });
 
-        return getLocalizedMessage('name_prompt', language) || `What's your first name?`;
+      return getLocalizedMessage('name_prompt', language) || `What's your first name?`;
       }
       return getLocalizedMessage('consent', language);
     }
@@ -106,6 +111,9 @@ export async function handleOnboarding(
           status: 'active',
         },
       });
+
+      // Track onboarding completion
+      await trackExperimentMetric('onboarding-consent-v2', user.id, 'completion_rate');
 
       return getLocalizedMessage('welcome', language);
     }

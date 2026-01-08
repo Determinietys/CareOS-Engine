@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { findLeadsForVendor } from '@/lib/geographic-matching';
 
 /**
  * Get leads for vendor based on subscription tier
@@ -68,31 +69,33 @@ export async function GET(req: NextRequest) {
       ];
     }
 
+    // Use geographic matching to find leads for this vendor
+    const leads = await findLeadsForVendor(vendor.id, {
+      category: subscriptionTier !== 'enterprise' && vendor.category !== 'general' ? vendor.category : filters?.category,
+      country: filters?.country,
+      city: filters?.city,
+    });
+
     // Limit based on tier
     const take = subscriptionTier === 'enterprise' ? 1000 : subscriptionTier === 'premium' ? 100 : subscriptionTier === 'basic' ? 20 : 5;
-
-    const leads = await prisma.lead.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            name: true,
-            phone: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      take,
-    });
+    
+    // Apply tier limit
+    const limitedLeads = leads.slice(0, take);
 
     return NextResponse.json({
       success: true,
-      leads: leads.map((lead) => ({
+      leads: limitedLeads.map((lead) => ({
         id: lead.id,
         category: lead.category,
         needDescription: lead.needDescription,
         locationState: lead.locationState,
+        country: lead.country,
+        countryName: lead.countryName,
+        city: lead.city,
+        region: lead.region,
+        budget: lead.budget ? Number(lead.budget) : null,
+        budgetUSD: lead.budgetUSD ? Number(lead.budgetUSD) : null,
+        currency: lead.currency,
         urgency: lead.urgency,
         status: lead.status,
         leadValue: lead.leadValue ? Number(lead.leadValue) : null,
