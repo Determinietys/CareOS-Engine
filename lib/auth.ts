@@ -116,8 +116,11 @@ export const authOptions: NextAuthOptions = {
         }
       },
     }),
-    // Only enable Google OAuth if credentials are provided
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+    // Only enable Google OAuth if credentials are provided and not empty
+    ...(process.env.GOOGLE_CLIENT_ID && 
+        process.env.GOOGLE_CLIENT_SECRET && 
+        process.env.GOOGLE_CLIENT_ID.trim() !== "" && 
+        process.env.GOOGLE_CLIENT_SECRET.trim() !== ""
       ? [
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,

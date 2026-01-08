@@ -67,18 +67,23 @@ export default function SignInPage() {
   }
 
   const handleGoogleSignIn = async () => {
+    // Double-check OAuth is enabled before attempting
+    if (!isGoogleOAuthEnabled) {
+      setError("Google sign-in is not configured. Please use email/password to sign in.")
+      return
+    }
+
     setLoading(true)
     setError("")
     try {
       // Try to sign in with Google OAuth
-      // If not configured, this will redirect to error page
       await signIn("google", { 
         callbackUrl: "/",
         redirect: true, // OAuth requires redirect
       })
     } catch (err) {
       // If error occurs before redirect, show message
-      setError("Google sign-in is not configured. Please use email/password to sign in.")
+      setError("Google sign-in failed. Please try again or use email/password.")
       setLoading(false)
     }
   }
