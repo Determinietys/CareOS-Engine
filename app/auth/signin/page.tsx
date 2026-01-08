@@ -71,6 +71,11 @@ export default function SignInPage() {
 
   const handleGoogleSignIn = async () => {
     // Double-check OAuth is enabled before attempting
+    if (!oauthStatusChecked) {
+      setError("Please wait while we check OAuth availability...")
+      return
+    }
+    
     if (!isGoogleOAuthEnabled) {
       setError("Google sign-in is not configured. Please use email/password to sign in.")
       return

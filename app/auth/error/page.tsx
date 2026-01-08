@@ -4,12 +4,12 @@ import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 
 const errorMessages: Record<string, string> = {
-  Configuration: "There is a problem with the server configuration.",
+  Configuration: "There is a problem with the server configuration. If this persists, please contact support.",
   AccessDenied: "You do not have permission to sign in.",
   Verification: "The verification token has expired or has already been used.",
-  OAuthSignin: "Error occurred while signing in with OAuth. Please try again or use email/password.",
-  OAuthCallback: "Error occurred in the OAuth callback. Please try again.",
-  OAuthCreateAccount: "Could not create OAuth account. Please try again.",
+  OAuthSignin: "Google sign-in is not configured for this application. Please use email/password to sign in instead.",
+  OAuthCallback: "Error occurred in the OAuth callback. Please try again or use email/password.",
+  OAuthCreateAccount: "Could not create OAuth account. Please try again or use email/password.",
   EmailCreateAccount: "Could not create email account. Please try again.",
   Callback: "Error occurred in the callback. Please try again.",
   OAuthAccountNotLinked: "To confirm your identity, sign in with the same account you used originally.",
