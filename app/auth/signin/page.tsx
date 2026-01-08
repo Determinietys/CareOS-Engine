@@ -15,6 +15,7 @@ export default function SignInPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [isGoogleOAuthEnabled, setIsGoogleOAuthEnabled] = useState(false)
+  const [oauthStatusChecked, setOauthStatusChecked] = useState(false)
 
   useEffect(() => {
     // Check if Google OAuth is enabled
@@ -22,9 +23,11 @@ export default function SignInPage() {
       .then((res) => res.json())
       .then((data) => {
         setIsGoogleOAuthEnabled(data.google || false)
+        setOauthStatusChecked(true)
       })
       .catch(() => {
         setIsGoogleOAuthEnabled(false)
+        setOauthStatusChecked(true)
       })
   }, [])
 
