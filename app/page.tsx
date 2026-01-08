@@ -131,12 +131,19 @@ export default function LandingPage() {
             🎮 Try Demo
           </Link>
         </div>
-        <div className="max-w-md mx-auto mb-8">
+        <div className="max-w-md mx-auto mb-8 flex gap-4 justify-center">
           <Link
             href="/sms-dashboard"
-            className="block text-center text-blue-600 dark:text-blue-400 hover:underline"
+            className="text-blue-600 dark:text-blue-400 hover:underline"
           >
             View Dashboard →
+          </Link>
+          <span className="text-gray-400">|</span>
+          <Link
+            href="/admin/leads"
+            className="text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            Business Portal →
           </Link>
         </div>
 
