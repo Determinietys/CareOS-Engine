@@ -1,0 +1,1750 @@
+project_analysis:
+  meta:
+    project_name: "CareOS Engine"
+    analyzed_at: "2025-01-08"
+    files_scanned: 44
+    version: "0.1.0"
+    
+  overview:
+    description: "CareOS Engine is a secure, AI-driven user management and authentication system that provides comprehensive user account management, authentication, authorization, and settings management capabilities. It serves as a foundation for building secure, scalable applications with robust authentication, MFA, profile management, privacy controls, subscription billing, and audit trails."
+    tech_stack:
+      - "Next.js 14 (App Router)"
+      - "React 18.3"
+      - "TypeScript 5.5"
+      - "PostgreSQL 15+"
+      - "Prisma ORM 5.19"
+      - "NextAuth.js 4.24"
+      - "Tailwind CSS 3.4"
+      - "Zod 3.23"
+      - "bcryptjs 2.4"
+      - "otplib 12.0"
+      - "Stripe 17.3"
+      - "nodemailer 7.0"
+      - "Jest 29.7"
+    user_types:
+      - "End Users (Consumers)"
+      - "Administrators (via settings)"
+      - "OAuth Users (Google)"
+      - "Subscribed Users (Free, Basic, Premium tiers)"
+    
+  entities:
+    - name: "User"
+      description: "Core user account entity containing authentication and profile information"
+      fields:
+        - name: "id"
+          type: "string (cuid)"
+          description: "Unique user identifier"
+          sensitive: false
+          required: true
+        - name: "name"
+          type: "string"
+          description: "User's display name"
+          sensitive: true
+          required: false
+        - name: "email"
+          type: "string"
+          description: "User's email address (unique, normalized to lowercase)"
+          sensitive: true
+          required: true
+        - name: "emailVerified"
+          type: "datetime"
+          description: "Timestamp when email was verified"
+          sensitive: false
+          required: false
+        - name: "password"
+          type: "string (hashed)"
+          description: "Bcrypt hashed password (12 rounds)"
+          sensitive: true
+          required: false
+        - name: "image"
+          type: "string (url)"
+          description: "Profile photo URL"
+          sensitive: true
+          required: false
+        - name: "phone"
+          type: "string"
+          description: "Phone number for MFA/recovery"
+          sensitive: true
+          required: false
+        - name: "phoneVerified"
+          type: "boolean"
+          description: "Whether phone number is verified"
+          sensitive: false
+          required: false
+        - name: "mfaEnabled"
+          type: "boolean"
+          description: "Whether MFA is enabled"
+          sensitive: false
+          required: false
+        - name: "mfaSecret"
+          type: "string"
+          description: "TOTP secret for MFA"
+          sensitive: true
+          required: false
+        - name: "mfaBackupCodes"
+          type: "string[]"
+          description: "Backup codes for MFA recovery"
+          sensitive: true
+          required: false
+        - name: "theme"
+          type: "string"
+          description: "UI theme preference (light/dark/system)"
+          sensitive: false
+          required: false
+        - name: "language"
+          type: "string"
+          description: "Language preference (default: en)"
+          sensitive: false
+          required: false
+        - name: "timezone"
+          type: "string"
+          description: "Timezone preference (default: UTC)"
+          sensitive: false
+          required: false
+        - name: "createdAt"
+          type: "datetime"
+          description: "Account creation timestamp"
+          sensitive: false
+          required: true
+        - name: "updatedAt"
+          type: "datetime"
+          description: "Last update timestamp"
+          sensitive: false
+          required: true
+      relationships:
+        - type: "hasMany"
+          entity: "Account"
+        - type: "hasMany"
+          entity: "Session"
+        - type: "hasMany"
+          entity: "LoginHistory"
+        - type: "hasMany"
+          entity: "Notification"
+        - type: "hasOne"
+          entity: "NotificationSettings"
+        - type: "hasOne"
+          entity: "PrivacySettings"
+        - type: "hasOne"
+          entity: "Subscription"
+        - type: "hasMany"
+          entity: "Invoice"
+    
+    - name: "Account"
+      description: "OAuth account linkages (Google, etc.)"
+      fields:
+        - name: "id"
+          type: "string (cuid)"
+          description: "Unique account identifier"
+          sensitive: false
+          required: true
+        - name: "userId"
+          type: "string"
+          description: "Foreign key to User"
+          sensitive: false
+          required: true
+        - name: "type"
+          type: "string"
+          description: "Account type (oauth)"
+          sensitive: false
+          required: true
+        - name: "provider"
+          type: "string"
+          description: "OAuth provider (google)"
+          sensitive: false
+          required: true
+        - name: "providerAccountId"
+          type: "string"
+          description: "Provider's user ID"
+          sensitive: false
+          required: true
+        - name: "refresh_token"
+          type: "string"
+          description: "OAuth refresh token"
+          sensitive: true
+          required: false
+        - name: "access_token"
+          type: "string"
+          description: "OAuth access token"
+          sensitive: true
+          required: false
+        - name: "expires_at"
+          type: "integer"
+          description: "Token expiration timestamp"
+          sensitive: false
+          required: false
+        - name: "token_type"
+          type: "string"
+          description: "Token type"
+          sensitive: false
+          required: false
+        - name: "scope"
+          type: "string"
+          description: "OAuth scopes"
+          sensitive: false
+          required: false
+        - name: "id_token"
+          type: "string"
+          description: "OAuth ID token"
+          sensitive: true
+          required: false
+        - name: "session_state"
+          type: "string"
+          description: "OAuth session state"
+          sensitive: false
+          required: false
+      relationships:
+        - type: "belongsTo"
+          entity: "User"
+    
+    - name: "Session"
+      description: "Active user sessions with device/location tracking"
+      fields:
+        - name: "id"
+          type: "string (cuid)"
+          description: "Unique session identifier"
+          sensitive: false
+          required: true
+        - name: "sessionToken"
+          type: "string (unique)"
+          description: "JWT session token"
+          sensitive: true
+          required: true
+        - name: "userId"
+          type: "string"
+          description: "Foreign key to User"
+          sensitive: false
+          required: true
+        - name: "expires"
+          type: "datetime"
+          description: "Session expiration timestamp"
+          sensitive: false
+          required: true
+        - name: "ipAddress"
+          type: "string"
+          description: "IP address of session"
+          sensitive: true
+          required: false
+        - name: "userAgent"
+          type: "string"
+          description: "Browser/user agent string"
+          sensitive: false
+          required: false
+        - name: "createdAt"
+          type: "datetime"
+          description: "Session creation timestamp"
+          sensitive: false
+          required: true
+        - name: "lastActiveAt"
+          type: "datetime"
+          description: "Last activity timestamp"
+          sensitive: false
+          required: true
+      relationships:
+        - type: "belongsTo"
+          entity: "User"
+    
+    - name: "VerificationToken"
+      description: "Email/phone verification tokens"
+      fields:
+        - name: "identifier"
+          type: "string"
+          description: "Email or phone being verified"
+          sensitive: true
+          required: true
+        - name: "token"
+          type: "string (unique)"
+          description: "Verification token"
+          sensitive: true
+          required: true
+        - name: "expires"
+          type: "datetime"
+          description: "Token expiration"
+          sensitive: false
+          required: true
+    
+    - name: "LoginHistory"
+      description: "Audit trail of all login attempts"
+      fields:
+        - name: "id"
+          type: "string (cuid)"
+          description: "Unique log entry identifier"
+          sensitive: false
+          required: true
+        - name: "userId"
+          type: "string"
+          description: "Foreign key to User"
+          sensitive: false
+          required: true
+        - name: "ipAddress"
+          type: "string"
+          description: "IP address of login attempt"
+          sensitive: true
+          required: false
+        - name: "userAgent"
+          type: "string"
+          description: "Browser/user agent"
+          sensitive: false
+          required: false
+        - name: "success"
+          type: "boolean"
+          description: "Whether login succeeded"
+          sensitive: false
+          required: true
+        - name: "failureReason"
+          type: "string"
+          description: "Reason for failure if unsuccessful"
+          sensitive: false
+          required: false
+        - name: "createdAt"
+          type: "datetime"
+          description: "Login attempt timestamp"
+          sensitive: false
+          required: true
+      relationships:
+        - type: "belongsTo"
+          entity: "User"
+    
+    - name: "NotificationSettings"
+      description: "User preferences for notification types"
+      fields:
+        - name: "id"
+          type: "string (cuid)"
+          description: "Unique settings identifier"
+          sensitive: false
+          required: true
+        - name: "userId"
+          type: "string (unique)"
+          description: "Foreign key to User"
+          sensitive: false
+          required: true
+        - name: "emailMarketing"
+          type: "boolean"
+          description: "Marketing email preference"
+          sensitive: false
+          required: false
+        - name: "emailTransactional"
+          type: "boolean"
+          description: "Transactional email preference"
+          sensitive: false
+          required: false
+        - name: "emailUpdates"
+          type: "boolean"
+          description: "Update email preference"
+          sensitive: false
+          required: false
+        - name: "pushEnabled"
+          type: "boolean"
+          description: "Push notification preference"
+          sensitive: false
+          required: false
+        - name: "inAppEnabled"
+          type: "boolean"
+          description: "In-app notification preference"
+          sensitive: false
+          required: false
+      relationships:
+        - type: "belongsTo"
+          entity: "User"
+    
+    - name: "Notification"
+      description: "In-app notifications for users"
+      fields:
+        - name: "id"
+          type: "string (cuid)"
+          description: "Unique notification identifier"
+          sensitive: false
+          required: true
+        - name: "userId"
+          type: "string"
+          description: "Foreign key to User"
+          sensitive: false
+          required: true
+        - name: "type"
+          type: "string"
+          description: "Notification type (marketing/transactional/update)"
+          sensitive: false
+          required: true
+        - name: "title"
+          type: "string"
+          description: "Notification title"
+          sensitive: false
+          required: true
+        - name: "message"
+          type: "string (text)"
+          description: "Notification message"
+          sensitive: false
+          required: true
+        - name: "read"
+          type: "boolean"
+          description: "Whether notification has been read"
+          sensitive: false
+          required: false
+        - name: "createdAt"
+          type: "datetime"
+          description: "Notification creation timestamp"
+          sensitive: false
+          required: true
+      relationships:
+        - type: "belongsTo"
+          entity: "User"
+    
+    - name: "PrivacySettings"
+      description: "User privacy and data sharing preferences"
+      fields:
+        - name: "id"
+          type: "string (cuid)"
+          description: "Unique settings identifier"
+          sensitive: false
+          required: true
+        - name: "userId"
+          type: "string (unique)"
+          description: "Foreign key to User"
+          sensitive: false
+          required: true
+        - name: "profileVisibility"
+          type: "string"
+          description: "Profile visibility (public/private/friends)"
+          sensitive: false
+          required: false
+        - name: "dataSharing"
+          type: "boolean"
+          description: "Data sharing preference"
+          sensitive: false
+          required: false
+        - name: "analyticsEnabled"
+          type: "boolean"
+          description: "Analytics tracking preference"
+          sensitive: false
+          required: false
+        - name: "cookiesAccepted"
+          type: "boolean"
+          description: "Cookie consent status"
+          sensitive: false
+          required: false
+        - name: "cookiesAcceptedAt"
+          type: "datetime"
+          description: "Cookie consent timestamp"
+          sensitive: false
+          required: false
+      relationships:
+        - type: "belongsTo"
+          entity: "User"
+    
+    - name: "Subscription"
+      description: "User subscription and billing information"
+      fields:
+        - name: "id"
+          type: "string (cuid)"
+          description: "Unique subscription identifier"
+          sensitive: false
+          required: true
+        - name: "userId"
+          type: "string (unique)"
+          description: "Foreign key to User"
+          sensitive: false
+          required: true
+        - name: "tier"
+          type: "string"
+          description: "Subscription tier (free/basic/premium)"
+          sensitive: false
+          required: false
+        - name: "status"
+          type: "string"
+          description: "Subscription status (active/canceled/past_due)"
+          sensitive: false
+          required: true
+        - name: "stripeCustomerId"
+          type: "string (unique)"
+          description: "Stripe customer ID"
+          sensitive: false
+          required: false
+        - name: "stripeSubscriptionId"
+          type: "string (unique)"
+          description: "Stripe subscription ID"
+          sensitive: false
+          required: false
+        - name: "currentPeriodEnd"
+          type: "datetime"
+          description: "Current billing period end date"
+          sensitive: false
+          required: false
+        - name: "cancelAtPeriodEnd"
+          type: "boolean"
+          description: "Whether subscription will cancel at period end"
+          sensitive: false
+          required: false
+        - name: "createdAt"
+          type: "datetime"
+          description: "Subscription creation timestamp"
+          sensitive: false
+          required: true
+        - name: "updatedAt"
+          type: "datetime"
+          description: "Last update timestamp"
+          sensitive: false
+          required: true
+      relationships:
+        - type: "belongsTo"
+          entity: "User"
+        - type: "hasMany"
+          entity: "Invoice"
+    
+    - name: "Invoice"
+      description: "Payment invoice history"
+      fields:
+        - name: "id"
+          type: "string (cuid)"
+          description: "Unique invoice identifier"
+          sensitive: false
+          required: true
+        - name: "userId"
+          type: "string"
+          description: "Foreign key to User"
+          sensitive: false
+          required: true
+        - name: "subscriptionId"
+          type: "string"
+          description: "Foreign key to Subscription"
+          sensitive: false
+          required: true
+        - name: "stripeInvoiceId"
+          type: "string (unique)"
+          description: "Stripe invoice ID"
+          sensitive: false
+          required: false
+        - name: "amount"
+          type: "integer"
+          description: "Invoice amount in cents"
+          sensitive: true
+          required: true
+        - name: "currency"
+          type: "string"
+          description: "Currency code (default: usd)"
+          sensitive: false
+          required: false
+        - name: "status"
+          type: "string"
+          description: "Invoice status (paid/pending/failed)"
+          sensitive: false
+          required: true
+        - name: "pdfUrl"
+          type: "string (url)"
+          description: "PDF invoice URL"
+          sensitive: false
+          required: false
+        - name: "createdAt"
+          type: "datetime"
+          description: "Invoice creation timestamp"
+          sensitive: false
+          required: true
+      relationships:
+        - type: "belongsTo"
+          entity: "User"
+        - type: "belongsTo"
+          entity: "Subscription"
+    
+  events:
+    # Authentication Events
+    - action_name: "user.signup"
+      category: "user_action"
+      description: "User creates a new account"
+      trigger: "Form submission on /auth/signup"
+      properties:
+        - name: "email"
+          type: "string"
+          description: "User email address"
+          example: "user@example.com"
+        - name: "name"
+          type: "string"
+          description: "User's name"
+          example: "John Doe"
+        - name: "method"
+          type: "string"
+          description: "Signup method (email/oauth)"
+          example: "email"
+        - name: "has_password"
+          type: "boolean"
+          description: "Whether password was set"
+          example: true
+      frequency: "medium"
+      business_importance: "critical"
+    
+    - action_name: "user.signin"
+      category: "user_action"
+      description: "User signs in to their account"
+      trigger: "Form submission on /auth/signin or OAuth callback"
+      properties:
+        - name: "method"
+          type: "string"
+          description: "Signin method (credentials/google)"
+          example: "credentials"
+        - name: "mfa_used"
+          type: "boolean"
+          description: "Whether MFA was required"
+          example: false
+        - name: "ip_address"
+          type: "string"
+          description: "User's IP address"
+          example: "192.168.1.1"
+        - name: "user_agent"
+          type: "string"
+          description: "Browser user agent"
+          example: "Mozilla/5.0..."
+        - name: "success"
+          type: "boolean"
+          description: "Whether signin succeeded"
+          example: true
+        - name: "failure_reason"
+          type: "string"
+          description: "Reason for failure if unsuccessful"
+          example: null
+      frequency: "high"
+      business_importance: "critical"
+    
+    - action_name: "user.signout"
+      category: "user_action"
+      description: "User signs out of their account"
+      trigger: "Sign out button click"
+      properties:
+        - name: "session_id"
+          type: "string"
+          description: "Session that was terminated"
+          example: "cmk5ccpd3000043h0ey82lu68"
+      frequency: "medium"
+      business_importance: "high"
+    
+    - action_name: "session.revoke"
+      category: "user_action"
+      description: "User revokes an active session"
+      trigger: "Delete button click on session in security settings"
+      properties:
+        - name: "session_id"
+          type: "string"
+          description: "Revoked session ID"
+          example: "cmk5ccpd3000043h0ey82lu68"
+        - name: "device_type"
+          type: "string"
+          description: "Device type from user agent"
+          example: "desktop"
+      frequency: "low"
+      business_importance: "medium"
+    
+    # Profile Management Events
+    - action_name: "profile.update"
+      category: "user_action"
+      description: "User updates their profile information"
+      trigger: "Form submission on /settings/profile"
+      properties:
+        - name: "fields_updated"
+          type: "string[]"
+          description: "List of fields that were updated"
+          example: ["name", "phone"]
+        - name: "has_image"
+          type: "boolean"
+          description: "Whether profile image was updated"
+          example: false
+      frequency: "low"
+      business_importance: "medium"
+    
+    - action_name: "profile.image.upload"
+      category: "user_action"
+      description: "User uploads a profile image"
+      trigger: "Image upload on profile settings"
+      properties:
+        - name: "file_size"
+          type: "number"
+          description: "Image file size in bytes"
+          example: 245760
+        - name: "file_type"
+          type: "string"
+          description: "Image MIME type"
+          example: "image/jpeg"
+      frequency: "low"
+      business_importance: "low"
+    
+    # Security Events
+    - action_name: "password.change"
+      category: "user_action"
+      description: "User changes their password"
+      trigger: "Form submission on security settings"
+      properties:
+        - name: "method"
+          type: "string"
+          description: "How password was changed (user_requested/reset)"
+          example: "user_requested"
+      frequency: "low"
+      business_importance: "high"
+    
+    - action_name: "email.change.initiate"
+      category: "user_action"
+      description: "User initiates email change"
+      trigger: "Form submission to change email"
+      properties:
+        - name: "new_email"
+          type: "string"
+          description: "New email address"
+          example: "newemail@example.com"
+      frequency: "low"
+      business_importance: "high"
+    
+    - action_name: "mfa.setup"
+      category: "user_action"
+      description: "User sets up multi-factor authentication"
+      trigger: "MFA setup completion"
+      properties:
+        - name: "method"
+          type: "string"
+          description: "MFA method (totp)"
+          example: "totp"
+      frequency: "low"
+      business_importance: "high"
+    
+    - action_name: "mfa.verify"
+      category: "user_action"
+      description: "User verifies MFA code"
+      trigger: "MFA code submission"
+      properties:
+        - name: "success"
+          type: "boolean"
+          description: "Whether verification succeeded"
+          example: true
+        - name: "context"
+          type: "string"
+          description: "Verification context (setup/login)"
+          example: "login"
+      frequency: "medium"
+      business_importance: "high"
+    
+    - action_name: "mfa.disable"
+      category: "user_action"
+      description: "User disables MFA"
+      trigger: "MFA disable action"
+      properties: {}
+      frequency: "low"
+      business_importance: "high"
+    
+    # Settings Events
+    - action_name: "settings.notifications.update"
+      category: "user_action"
+      description: "User updates notification preferences"
+      trigger: "Toggle switches on notification settings"
+      properties:
+        - name: "email_marketing"
+          type: "boolean"
+          description: "Marketing email preference"
+          example: true
+        - name: "email_transactional"
+          type: "boolean"
+          description: "Transactional email preference"
+          example: true
+        - name: "email_updates"
+          type: "boolean"
+          description: "Update email preference"
+          example: false
+        - name: "push_enabled"
+          type: "boolean"
+          description: "Push notification preference"
+          example: true
+        - name: "in_app_enabled"
+          type: "boolean"
+          description: "In-app notification preference"
+          example: true
+      frequency: "low"
+      business_importance: "medium"
+    
+    - action_name: "settings.privacy.update"
+      category: "user_action"
+      description: "User updates privacy settings"
+      trigger: "Privacy settings form submission"
+      properties:
+        - name: "profile_visibility"
+          type: "string"
+          description: "Profile visibility setting"
+          example: "private"
+        - name: "data_sharing"
+          type: "boolean"
+          description: "Data sharing preference"
+          example: false
+        - name: "analytics_enabled"
+          type: "boolean"
+          description: "Analytics tracking preference"
+          example: true
+        - name: "cookies_accepted"
+          type: "boolean"
+          description: "Cookie consent status"
+          example: true
+      frequency: "low"
+      business_importance: "high"
+    
+    - action_name: "settings.preferences.update"
+      category: "user_action"
+      description: "User updates application preferences"
+      trigger: "Preferences form submission"
+      properties:
+        - name: "theme"
+          type: "string"
+          description: "Theme preference"
+          example: "dark"
+        - name: "language"
+          type: "string"
+          description: "Language preference"
+          example: "en"
+        - name: "timezone"
+          type: "string"
+          description: "Timezone preference"
+          example: "America/New_York"
+      frequency: "low"
+      business_importance: "low"
+    
+    # Data Management Events
+    - action_name: "data.export"
+      category: "user_action"
+      description: "User exports their data (GDPR)"
+      trigger: "Export button click on privacy settings"
+      properties:
+        - name: "format"
+          type: "string"
+          description: "Export format"
+          example: "json"
+        - name: "data_types"
+          type: "string[]"
+          description: "Types of data exported"
+          example: ["profile", "sessions", "notifications"]
+      frequency: "low"
+      business_importance: "high"
+    
+    - action_name: "account.delete"
+      category: "user_action"
+      description: "User initiates account deletion"
+      trigger: "Delete account button click"
+      properties:
+        - name: "reason"
+          type: "string"
+          description: "Deletion reason if provided"
+          example: null
+      frequency: "low"
+      business_importance: "critical"
+    
+    # Subscription Events
+    - action_name: "subscription.create"
+      category: "transaction"
+      description: "User creates a subscription"
+      trigger: "Subscription creation (defaults to free on signup)"
+      properties:
+        - name: "tier"
+          type: "string"
+          description: "Subscription tier"
+          example: "free"
+      frequency: "medium"
+      business_importance: "critical"
+    
+    - action_name: "subscription.upgrade"
+      category: "transaction"
+      description: "User upgrades subscription tier"
+      trigger: "Upgrade button click on billing page"
+      properties:
+        - name: "from_tier"
+          type: "string"
+          description: "Previous tier"
+          example: "free"
+        - name: "to_tier"
+          type: "string"
+          description: "New tier"
+          example: "premium"
+      frequency: "low"
+      business_importance: "critical"
+    
+    - action_name: "subscription.downgrade"
+      category: "transaction"
+      description: "User downgrades subscription tier"
+      trigger: "Downgrade button click"
+      properties:
+        - name: "from_tier"
+          type: "string"
+          description: "Previous tier"
+          example: "premium"
+        - name: "to_tier"
+          type: "string"
+          description: "New tier"
+          example: "basic"
+      frequency: "low"
+      business_importance: "high"
+    
+    - action_name: "subscription.cancel"
+      category: "transaction"
+      description: "User cancels subscription"
+      trigger: "Cancel subscription action"
+      properties:
+        - name: "tier"
+          type: "string"
+          description: "Canceled tier"
+          example: "premium"
+        - name: "cancel_at_period_end"
+          type: "boolean"
+          description: "Whether cancellation is at period end"
+          example: true
+      frequency: "low"
+      business_importance: "critical"
+    
+    - action_name: "invoice.view"
+      category: "user_action"
+      description: "User views an invoice"
+      trigger: "Invoice click on billing page"
+      properties:
+        - name: "invoice_id"
+          type: "string"
+          description: "Invoice identifier"
+          example: "cmk5ccpd3000043h0ey82lu68"
+        - name: "amount"
+          type: "number"
+          description: "Invoice amount in cents"
+          example: 9999
+      frequency: "low"
+      business_importance: "medium"
+    
+    # CareOS Unified Events
+    - action_name: "careos.capture"
+      category: "user_action"
+      description: "User captures text input for AI classification"
+      trigger: "Form submission in Quick Capture"
+      properties:
+        - name: "text_length"
+          type: "number"
+          description: "Length of captured text"
+          example: 150
+        - name: "category"
+          type: "string"
+          description: "AI-classified category"
+          example: "task"
+        - name: "urgency"
+          type: "string"
+          description: "Detected urgency level"
+          example: "low"
+        - name: "requires_expert"
+          type: "boolean"
+          description: "Whether expert consultation is suggested"
+          example: false
+      frequency: "high"
+      business_importance: "high"
+    
+    - action_name: "careos.dashboard.view"
+      category: "navigation"
+      description: "User views CareOS dashboard"
+      trigger: "Navigation to dashboard tab"
+      properties:
+        - name: "view_type"
+          type: "string"
+          description: "Dashboard view type"
+          example: "overview"
+      frequency: "high"
+      business_importance: "medium"
+    
+    # Navigation Events
+    - action_name: "page.view"
+      category: "navigation"
+      description: "User views a page"
+      trigger: "Page load or navigation"
+      properties:
+        - name: "path"
+          type: "string"
+          description: "Page path"
+          example: "/settings/profile"
+        - name: "referrer"
+          type: "string"
+          description: "Referrer URL"
+          example: "/settings"
+      frequency: "high"
+      business_importance: "low"
+    
+    - action_name: "settings.navigate"
+      category: "navigation"
+      description: "User navigates to a settings section"
+      trigger: "Settings navigation click"
+      properties:
+        - name: "section"
+          type: "string"
+          description: "Settings section"
+          example: "security"
+      frequency: "medium"
+      business_importance: "low"
+    
+  funnels:
+    - funnel_name: "user_onboarding"
+      steps:
+        - step: 1
+          name: "Land on signup page"
+          event: "page.view"
+        - step: 2
+          name: "Fill signup form"
+          event: "user.signup.start"
+        - step: 3
+          name: "Submit signup"
+          event: "user.signup"
+        - step: 4
+          name: "Redirect to signin"
+          event: "page.view"
+        - step: 5
+          name: "Sign in"
+          event: "user.signin"
+        - step: 6
+          name: "View home page"
+          event: "page.view"
+      drop_off_points:
+        - "Form validation errors"
+        - "Email already exists"
+        - "Password requirements not met"
+        - "Signin after signup"
+    
+    - funnel_name: "mfa_setup"
+      steps:
+        - step: 1
+          name: "Navigate to security settings"
+          event: "settings.navigate"
+        - step: 2
+          name: "Click MFA setup"
+          event: "mfa.setup.start"
+        - step: 3
+          name: "Scan QR code"
+          event: "mfa.setup.qr_scanned"
+        - step: 4
+          name: "Verify MFA code"
+          event: "mfa.verify"
+        - step: 5
+          name: "MFA enabled"
+          event: "mfa.setup"
+      drop_off_points:
+        - "QR code scan step"
+        - "MFA verification failure"
+    
+    - funnel_name: "subscription_upgrade"
+      steps:
+        - step: 1
+          name: "View billing page"
+          event: "page.view"
+        - step: 2
+          name: "Click upgrade button"
+          event: "subscription.upgrade.start"
+        - step: 3
+          name: "Select tier"
+          event: "subscription.tier.select"
+        - step: 4
+          name: "Complete payment"
+          event: "subscription.upgrade"
+      drop_off_points:
+        - "Payment method entry"
+        - "Payment processing"
+        - "Stripe checkout"
+    
+    - funnel_name: "profile_completion"
+      steps:
+        - step: 1
+          name: "Navigate to profile settings"
+          event: "settings.navigate"
+        - step: 2
+          name: "Update profile information"
+          event: "profile.update"
+        - step: 3
+          name: "Upload profile image"
+          event: "profile.image.upload"
+      drop_off_points:
+        - "Profile form submission"
+        - "Image upload"
+    
+    - funnel_name: "careos_capture_flow"
+      steps:
+        - step: 1
+          name: "Navigate to CareOS Unified"
+          event: "page.view"
+        - step: 2
+          name: "Enter text in Quick Capture"
+          event: "careos.capture.start"
+        - step: 3
+          name: "Submit for classification"
+          event: "careos.capture"
+        - step: 4
+          name: "View classified result"
+          event: "careos.capture.result"
+        - step: 5
+          name: "Save or act on result"
+          event: "careos.capture.save"
+      drop_off_points:
+        - "Text input"
+        - "AI classification wait time"
+        - "Result review"
+  
+  sensitive_data:
+    pii:
+      - data_type: "Email Address"
+        location_in_code: "prisma/schema.prisma:User.email, app/api/auth/signup/route.ts"
+        current_protection: "Stored in database, normalized to lowercase, unique constraint"
+        regulations_applicable: ["GDPR", "CCPA", "PIPEDA"]
+        consent_required: true
+        retention_requirements: "Until account deletion"
+      
+      - data_type: "Name"
+        location_in_code: "prisma/schema.prisma:User.name"
+        current_protection: "Stored in database, optional field"
+        regulations_applicable: ["GDPR", "CCPA"]
+        consent_required: true
+        retention_requirements: "Until account deletion"
+      
+      - data_type: "Phone Number"
+        location_in_code: "prisma/schema.prisma:User.phone"
+        current_protection: "Stored in database, optional, can be verified"
+        regulations_applicable: ["GDPR", "CCPA", "TCPA"]
+        consent_required: true
+        retention_requirements: "Until account deletion"
+      
+      - data_type: "Profile Photo"
+        location_in_code: "prisma/schema.prisma:User.image, app/api/settings/profile/image/route.ts"
+        current_protection: "Stored as URL, file upload to public/uploads/"
+        regulations_applicable: ["GDPR", "CCPA"]
+        consent_required: true
+        retention_requirements: "Until account deletion"
+      
+      - data_type: "Date of Birth"
+        location_in_code: "Not currently stored"
+        current_protection: "N/A"
+        regulations_applicable: ["GDPR", "CCPA", "COPPA"]
+        consent_required: true
+        retention_requirements: "N/A"
+    
+    authentication:
+      - data_type: "Password"
+        location_in_code: "prisma/schema.prisma:User.password, lib/auth.ts"
+        current_protection: "Bcrypt hashed with 12 rounds, never stored in plaintext"
+        regulations_applicable: ["GDPR", "CCPA"]
+        consent_required: false
+        retention_requirements: "Until account deletion"
+      
+      - data_type: "MFA Secret"
+        location_in_code: "prisma/schema.prisma:User.mfaSecret"
+        current_protection: "Stored in database, should be encrypted"
+        regulations_applicable: ["GDPR"]
+        consent_required: false
+        retention_requirements: "Until MFA disabled or account deletion"
+      
+      - data_type: "MFA Backup Codes"
+        location_in_code: "prisma/schema.prisma:User.mfaBackupCodes"
+        current_protection: "Stored as array in database"
+        regulations_applicable: ["GDPR"]
+        consent_required: false
+        retention_requirements: "Until MFA disabled or account deletion"
+      
+      - data_type: "Session Tokens"
+        location_in_code: "prisma/schema.prisma:Session.sessionToken"
+        current_protection: "JWT tokens, stored in database"
+        regulations_applicable: ["GDPR"]
+        consent_required: false
+        retention_requirements: "Until session expiration or revocation"
+      
+      - data_type: "OAuth Tokens"
+        location_in_code: "prisma/schema.prisma:Account.access_token, refresh_token, id_token"
+        current_protection: "Stored in database, should be encrypted"
+        regulations_applicable: ["GDPR"]
+        consent_required: false
+        retention_requirements: "Until OAuth account unlinked"
+    
+    financial:
+      - data_type: "Payment Amounts"
+        location_in_code: "prisma/schema.prisma:Invoice.amount"
+        current_protection: "Stored in cents as integer"
+        regulations_applicable: ["PCI-DSS", "GDPR"]
+        consent_required: false
+        retention_requirements: "7 years for tax/accounting"
+      
+      - data_type: "Stripe Customer ID"
+        location_in_code: "prisma/schema.prisma:Subscription.stripeCustomerId"
+        current_protection: "Stored in database, links to Stripe"
+        regulations_applicable: ["PCI-DSS", "GDPR"]
+        consent_required: false
+        retention_requirements: "Until account deletion"
+      
+      - data_type: "Stripe Subscription ID"
+        location_in_code: "prisma/schema.prisma:Subscription.stripeSubscriptionId"
+        current_protection: "Stored in database"
+        regulations_applicable: ["PCI-DSS", "GDPR"]
+        consent_required: false
+        retention_requirements: "Until subscription cancellation"
+      
+      - data_type: "Invoice PDF URLs"
+        location_in_code: "prisma/schema.prisma:Invoice.pdfUrl"
+        current_protection: "Stored as URL, hosted by Stripe"
+        regulations_applicable: ["PCI-DSS", "GDPR"]
+        consent_required: false
+        retention_requirements: "7 years for tax/accounting"
+    
+    location:
+      - data_type: "IP Address"
+        location_in_code: "prisma/schema.prisma:Session.ipAddress, LoginHistory.ipAddress"
+        current_protection: "Stored in database for security auditing"
+        regulations_applicable: ["GDPR", "CCPA"]
+        consent_required: false
+        retention_requirements: "90 days for security, then anonymize"
+      
+      - data_type: "User Agent"
+        location_in_code: "prisma/schema.prisma:Session.userAgent, LoginHistory.userAgent"
+        current_protection: "Stored in database"
+        regulations_applicable: ["GDPR"]
+        consent_required: false
+        retention_requirements: "90 days, then anonymize"
+    
+    behavioral:
+      - data_type: "Login History"
+        location_in_code: "prisma/schema.prisma:LoginHistory"
+        current_protection: "Stored in database, includes IP and user agent"
+        regulations_applicable: ["GDPR"]
+        consent_required: false
+        retention_requirements: "90 days for security, then anonymize"
+      
+      - data_type: "Session Activity"
+        location_in_code: "prisma/schema.prisma:Session.lastActiveAt"
+        current_protection: "Stored in database"
+        regulations_applicable: ["GDPR"]
+        consent_required: false
+        retention_requirements: "Until session expiration"
+      
+      - data_type: "Privacy Preferences"
+        location_in_code: "prisma/schema.prisma:PrivacySettings"
+        current_protection: "Stored in database, includes analytics consent"
+        regulations_applicable: ["GDPR", "CCPA"]
+        consent_required: true
+        retention_requirements: "Until account deletion"
+      
+      - data_type: "Notification Preferences"
+        location_in_code: "prisma/schema.prisma:NotificationSettings"
+        current_protection: "Stored in database"
+        regulations_applicable: ["GDPR", "CCPA", "CAN-SPAM", "TCPA"]
+        consent_required: true
+        retention_requirements: "Until account deletion"
+  
+  current_analytics:
+    tools: []
+    events_tracked: []
+    gaps: |
+      No analytics tracking is currently implemented. The following should be tracked:
+      - All user authentication events (signup, signin, signout)
+      - Profile updates and settings changes
+      - Subscription lifecycle events
+      - CareOS capture and classification events
+      - Navigation patterns and page views
+      - Error events and failure reasons
+      - Feature usage (MFA setup, data export, etc.)
+      - Conversion funnels (signup → activation, free → paid)
+      - Retention metrics (daily/weekly active users)
+      - Session duration and activity patterns
+  
+  api_endpoints:
+    - method: "POST"
+      path: "/api/auth/signup"
+      description: "User registration endpoint"
+      authentication: "none"
+      request_body: "{ name: string, email: string, password: string }"
+      response_body: "{ message: string, user: { id, email, name } }"
+      trackable_event: "user.signup"
+    
+    - method: "GET"
+      path: "/api/auth/[...nextauth]"
+      description: "NextAuth endpoints (signin, signout, callback, session, providers)"
+      authentication: "optional"
+      request_body: "Varies by endpoint"
+      response_body: "Varies by endpoint"
+      trackable_event: "user.signin, user.signout, oauth.callback"
+    
+    - method: "GET"
+      path: "/api/auth/oauth-status"
+      description: "Check if OAuth providers are configured"
+      authentication: "none"
+      request_body: "none"
+      response_body: "{ google: boolean }"
+      trackable_event: null
+    
+    - method: "PATCH"
+      path: "/api/settings/profile"
+      description: "Update user profile information"
+      authentication: "required"
+      request_body: "{ name?: string, phone?: string }"
+      response_body: "{ user: { id, name, email, image, phone, phoneVerified } }"
+      trackable_event: "profile.update"
+    
+    - method: "POST"
+      path: "/api/settings/profile/image"
+      description: "Upload profile image"
+      authentication: "required"
+      request_body: "multipart/form-data with image file"
+      response_body: "{ url: string }"
+      trackable_event: "profile.image.upload"
+    
+    - method: "POST"
+      path: "/api/settings/security/password"
+      description: "Change user password"
+      authentication: "required"
+      request_body: "{ currentPassword: string, newPassword: string, confirmPassword: string }"
+      response_body: "{ message: string }"
+      trackable_event: "password.change"
+    
+    - method: "POST"
+      path: "/api/settings/security/email"
+      description: "Change user email (initiates verification)"
+      authentication: "required"
+      request_body: "{ newEmail: string, password: string }"
+      response_body: "{ message: string }"
+      trackable_event: "email.change.initiate"
+    
+    - method: "GET"
+      path: "/api/mfa/setup"
+      description: "Generate MFA secret and QR code"
+      authentication: "required"
+      request_body: "none"
+      response_body: "{ secret: string, qrCodeUrl: string }"
+      trackable_event: "mfa.setup.start"
+    
+    - method: "POST"
+      path: "/api/mfa/verify"
+      description: "Verify MFA code and enable MFA"
+      authentication: "required"
+      request_body: "{ code: string }"
+      response_body: "{ success: boolean, message: string }"
+      trackable_event: "mfa.verify, mfa.setup"
+    
+    - method: "DELETE"
+      path: "/api/sessions/[sessionId]"
+      description: "Revoke a specific session"
+      authentication: "required"
+      request_body: "none"
+      response_body: "{ message: string }"
+      trackable_event: "session.revoke"
+    
+    - method: "PUT"
+      path: "/api/settings/notifications"
+      description: "Update notification preferences"
+      authentication: "required"
+      request_body: "{ emailMarketing?: boolean, emailTransactional?: boolean, emailUpdates?: boolean, pushEnabled?: boolean, inAppEnabled?: boolean }"
+      response_body: "{ settings: NotificationSettings }"
+      trackable_event: "settings.notifications.update"
+    
+    - method: "PUT"
+      path: "/api/settings/privacy"
+      description: "Update privacy settings"
+      authentication: "required"
+      request_body: "{ profileVisibility?: string, dataSharing?: boolean, analyticsEnabled?: boolean, cookiesAccepted?: boolean }"
+      response_body: "{ settings: PrivacySettings }"
+      trackable_event: "settings.privacy.update"
+    
+    - method: "GET"
+      path: "/api/settings/privacy/export"
+      description: "Export user data (GDPR)"
+      authentication: "required"
+      request_body: "none"
+      response_body: "JSON file with all user data"
+      trackable_event: "data.export"
+    
+    - method: "DELETE"
+      path: "/api/settings/privacy/delete"
+      description: "Delete user account"
+      authentication: "required"
+      request_body: "{ password?: string, reason?: string }"
+      response_body: "{ message: string }"
+      trackable_event: "account.delete"
+    
+    - method: "PUT"
+      path: "/api/settings/preferences"
+      description: "Update application preferences"
+      authentication: "required"
+      request_body: "{ theme?: string, language?: string, timezone?: string }"
+      response_body: "{ preferences: { theme, language, timezone } }"
+      trackable_event: "settings.preferences.update"
+    
+    - method: "POST"
+      path: "/api/careos/capture"
+      description: "AI classification endpoint for Quick Capture"
+      authentication: "required"
+      request_body: "{ text: string }"
+      response_body: "{ success: boolean, classification: { category, title, details, urgency, suggestedAction, entities, sentiment, requiresExpert } }"
+      trackable_event: "careos.capture"
+  
+  integrations:
+    - service: "Google OAuth"
+      purpose: "Social authentication"
+      data_sent: ["OAuth authorization request"]
+      data_received: ["User email", "User name", "User profile image", "OAuth tokens"]
+      has_dpa: false
+      notes: "Optional integration, only enabled if credentials provided"
+    
+    - service: "Stripe"
+      purpose: "Payment processing and subscription management"
+      data_sent: ["Customer information", "Subscription details", "Payment method (via Stripe Checkout)"]
+      data_received: ["Customer ID", "Subscription ID", "Invoice IDs", "Payment status", "Invoice PDFs"]
+      has_dpa: true
+      notes: "Configured but not fully integrated. Payment processing handled by Stripe, no card data stored locally"
+    
+    - service: "Nodemailer (SMTP)"
+      purpose: "Email delivery for transactional and marketing emails"
+      data_sent: ["Recipient email", "Email content", "Subject"]
+      data_received: ["Delivery status"]
+      has_dpa: false
+      notes: "Configured but requires SMTP server setup. Email templates not yet implemented"
+    
+    - service: "Claude API (Planned)"
+      purpose: "AI classification for CareOS Quick Capture"
+      data_sent: ["User input text"]
+      data_received: ["Classification results", "Extracted entities", "Sentiment analysis"]
+      has_dpa: false
+      notes: "Referenced in code but not yet integrated. Currently returns mock data"
+    
+    - service: "PostgreSQL Database"
+      purpose: "Primary data storage"
+      data_sent: ["All application data"]
+      data_received: ["All application data"]
+      has_dpa: false
+      notes: "Local database, should use encrypted connections in production"
+  
+  recommended_schema: |
+    // TypeScript interfaces for CareOS Engine event tracking
+    
+    // Base context included with every event
+    interface CareOSContext {
+      // User context
+      user_id: string;
+      user_email: string; // hashed or anonymized if privacy settings require
+      subscription_tier: "free" | "basic" | "premium";
+      mfa_enabled: boolean;
+      
+      // Session context
+      session_id: string;
+      session_created_at: string; // ISO datetime
+      session_duration_seconds?: number;
+      
+      // Device context
+      user_agent: string;
+      device_type: "desktop" | "mobile" | "tablet";
+      browser: string;
+      os: string;
+      
+      // Location context (anonymized)
+      country_code?: string; // from IP, not precise location
+      timezone: string;
+      
+      // Privacy context
+      analytics_enabled: boolean; // from PrivacySettings
+      cookies_accepted: boolean;
+      
+      // Feature flags
+      feature_flags?: Record<string, boolean>;
+      
+      // Request context
+      request_id: string;
+      timestamp: string; // ISO datetime
+      url: string;
+      referrer?: string;
+    }
+    
+    // Authentication Events
+    interface UserSignupEvent {
+      event: "user.signup";
+      properties: {
+        method: "email" | "google";
+        email_domain: string; // anonymized domain only
+        has_password: boolean;
+        name_provided: boolean;
+        phone_provided: boolean;
+      };
+      context: CareOSContext;
+    }
+    
+    interface UserSigninEvent {
+      event: "user.signin";
+      properties: {
+        method: "credentials" | "google";
+        mfa_used: boolean;
+        success: boolean;
+        failure_reason?: string;
+        ip_address_hash: string; // hashed IP
+        is_new_device: boolean;
+        days_since_last_signin?: number;
+      };
+      context: CareOSContext;
+    }
+    
+    interface UserSignoutEvent {
+      event: "user.signout";
+      properties: {
+        session_duration_seconds: number;
+        reason?: "user_initiated" | "session_expired" | "security";
+      };
+      context: CareOSContext;
+    }
+    
+    // Profile Events
+    interface ProfileUpdateEvent {
+      event: "profile.update";
+      properties: {
+        fields_updated: string[];
+        has_image: boolean;
+        image_size_bytes?: number;
+      };
+      context: CareOSContext;
+    }
+    
+    // Security Events
+    interface PasswordChangeEvent {
+      event: "password.change";
+      properties: {
+        method: "user_requested" | "reset" | "admin";
+        mfa_required: boolean;
+      };
+      context: CareOSContext;
+    }
+    
+    interface MfaSetupEvent {
+      event: "mfa.setup";
+      properties: {
+        method: "totp";
+        setup_duration_seconds: number;
+        verification_attempts: number;
+      };
+      context: CareOSContext;
+    }
+    
+    interface MfaVerifyEvent {
+      event: "mfa.verify";
+      properties: {
+        context: "setup" | "login";
+        success: boolean;
+        attempt_number: number;
+      };
+      context: CareOSContext;
+    }
+    
+    // Settings Events
+    interface NotificationSettingsUpdateEvent {
+      event: "settings.notifications.update";
+      properties: {
+        email_marketing: boolean;
+        email_transactional: boolean;
+        email_updates: boolean;
+        push_enabled: boolean;
+        in_app_enabled: boolean;
+        changes: string[]; // which settings changed
+      };
+      context: CareOSContext;
+    }
+    
+    interface PrivacySettingsUpdateEvent {
+      event: "settings.privacy.update";
+      properties: {
+        profile_visibility: "public" | "private" | "friends";
+        data_sharing: boolean;
+        analytics_enabled: boolean;
+        cookies_accepted: boolean;
+        changes: string[];
+      };
+      context: CareOSContext;
+    }
+    
+    // Subscription Events
+    interface SubscriptionUpgradeEvent {
+      event: "subscription.upgrade";
+      properties: {
+        from_tier: "free" | "basic" | "premium";
+        to_tier: "basic" | "premium";
+        amount_cents: number;
+        currency: string;
+        payment_method: "stripe";
+        days_as_free_user?: number;
+      };
+      context: CareOSContext;
+    }
+    
+    interface SubscriptionCancelEvent {
+      event: "subscription.cancel";
+      properties: {
+        tier: "free" | "basic" | "premium";
+        cancel_at_period_end: boolean;
+        days_until_cancellation?: number;
+        total_revenue_cents?: number;
+      };
+      context: CareOSContext;
+    }
+    
+    // CareOS Unified Events
+    interface CareOSCaptureEvent {
+      event: "careos.capture";
+      properties: {
+        text_length: number;
+        category: "health" | "task" | "call" | "appointment" | "financial" | "medication" | "note";
+        urgency: "low" | "medium" | "high";
+        requires_expert: boolean;
+        processing_time_ms: number;
+        ai_confidence?: number;
+      };
+      context: CareOSContext;
+    }
+    
+    // Navigation Events
+    interface PageViewEvent {
+      event: "page.view";
+      properties: {
+        path: string;
+        referrer?: string;
+        load_time_ms?: number;
+      };
+      context: CareOSContext;
+    }
+    
+    // Data Management Events
+    interface DataExportEvent {
+      event: "data.export";
+      properties: {
+        format: "json";
+        data_size_bytes: number;
+        data_types: string[];
+      };
+      context: CareOSContext;
+    }
+    
+    interface AccountDeleteEvent {
+      event: "account.delete";
+      properties: {
+        reason?: string;
+        account_age_days: number;
+        subscription_tier: "free" | "basic" | "premium";
+        total_captures?: number;
+      };
+      context: CareOSContext;
+    }
+    
+    // Union type for all events
+    type CareOSEvent =
+      | UserSignupEvent
+      | UserSigninEvent
+      | UserSignoutEvent
+      | ProfileUpdateEvent
+      | PasswordChangeEvent
+      | MfaSetupEvent
+      | MfaVerifyEvent
+      | NotificationSettingsUpdateEvent
+      | PrivacySettingsUpdateEvent
+      | SubscriptionUpgradeEvent
+      | SubscriptionCancelEvent
+      | CareOSCaptureEvent
+      | PageViewEvent
+      | DataExportEvent
+      | AccountDeleteEvent;
+  
+  compliance:
+    applicable_regulations:
+      - "GDPR (General Data Protection Regulation) - EU users"
+      - "CCPA (California Consumer Privacy Act) - California users"
+      - "PIPEDA (Personal Information Protection and Electronic Documents Act) - Canada"
+      - "PCI-DSS (Payment Card Industry Data Security Standard) - Payment processing"
+      - "CAN-SPAM Act - Email marketing"
+      - "TCPA (Telephone Consumer Protection Act) - Phone/SMS communications"
+    
+    consent_categories:
+      - category: "Essential"
+        description: "Required for service operation (authentication, security)"
+        required: true
+        examples: ["Password storage", "Session management", "Login history"]
+      
+      - category: "Functional"
+        description: "Enhances user experience but not strictly required"
+        required: false
+        examples: ["Profile photo", "Theme preferences", "Language settings"]
+      
+      - category: "Analytics"
+        description: "Usage analytics and performance monitoring"
+        required: false
+        examples: ["Page views", "Feature usage", "Error tracking"]
+        setting: "PrivacySettings.analyticsEnabled"
+      
+      - category: "Marketing"
+        description: "Marketing communications and promotional content"
+        required: false
+        examples: ["Email marketing", "Product updates", "Newsletters"]
+        setting: "NotificationSettings.emailMarketing"
+      
+      - category: "Data Sharing"
+        description: "Sharing data with third parties"
+        required: false
+        examples: ["Third-party analytics", "Partner integrations"]
+        setting: "PrivacySettings.dataSharing"
+      
+      - category: "Cookies"
+        description: "Cookie usage for tracking and preferences"
+        required: false
+        examples: ["Session cookies", "Analytics cookies", "Preference cookies"]
+        setting: "PrivacySettings.cookiesAccepted"
+    
+    retention_policies:
+      - data_type: "User Account Data"
+        retention_period: "Until account deletion"
+        anonymization: "Full deletion upon request"
+        legal_requirements: "GDPR Right to Erasure"
+      
+      - data_type: "Login History"
+        retention_period: "90 days active, then anonymize IP addresses"
+        anonymization: "Remove IP and user agent after 90 days"
+        legal_requirements: "Security audit requirements"
+      
+      - data_type: "Session Data"
+        retention_period: "Until session expiration (30 days default)"
+        anonymization: "Automatic deletion on expiration"
+        legal_requirements: "Security best practices"
+      
+      - data_type: "Financial Records (Invoices)"
+        retention_period: "7 years"
+        anonymization: "None (legal requirement)"
+        legal_requirements: "Tax and accounting regulations"
+      
+      - data_type: "OAuth Tokens"
+        retention_period: "Until OAuth account unlinked or token expiration"
+        anonymization: "Deletion on unlink"
+        legal_requirements: "OAuth provider requirements"
+      
+      - data_type: "MFA Secrets"
+        retention_period: "Until MFA disabled or account deletion"
+        anonymization: "Deletion on disable"
+        legal_requirements: "Security best practices"
+    
+    concerns:
+      - concern: "Profile images stored in public directory"
+        severity: "medium"
+        recommendation: "Migrate to cloud storage (S3, Cloudinary) with access controls"
+      
+      - concern: "MFA secrets stored in plaintext"
+        severity: "high"
+        recommendation: "Encrypt MFA secrets at rest using application-level encryption"
+      
+      - concern: "OAuth tokens stored in plaintext"
+        severity: "high"
+        recommendation: "Encrypt OAuth tokens at rest"
+      
+      - concern: "IP addresses stored without anonymization"
+        severity: "medium"
+        recommendation: "Implement automatic IP anonymization after 90 days"
+      
+      - concern: "No data retention automation"
+        severity: "medium"
+        recommendation: "Implement scheduled jobs to enforce retention policies"
+      
+      - concern: "Email verification tokens have no expiration tracking"
+        severity: "low"
+        recommendation: "Add expiration tracking to VerificationToken model"
+      
+      - concern: "No audit log for sensitive operations"
+        severity: "medium"
+        recommendation: "Add audit logging for password changes, email changes, account deletions"
+      
+      - concern: "Stripe integration incomplete"
+        severity: "low"
+        recommendation: "Complete Stripe webhook handling for subscription lifecycle events"
+      
+      - concern: "No rate limiting on API endpoints"
+        severity: "medium"
+        recommendation: "Implement rate limiting to prevent abuse and brute force attacks"
+      
+      - concern: "Analytics tracking not implemented"
+        severity: "low"
+        recommendation: "Implement analytics tracking respecting PrivacySettings.analyticsEnabled"
+
