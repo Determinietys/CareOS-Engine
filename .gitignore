@@ -20,6 +20,9 @@
 .DS_Store
 *.pem
 
+# partner keys (should never be committed)
+/keys/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

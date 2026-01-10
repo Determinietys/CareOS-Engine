@@ -80,6 +80,10 @@ model User {
   leads                Lead[]
   // Vendor relations
   vendor               Vendor?
+  // Partner referral tracking
+  source               String?   @db.Text // 'organic', 'businessos_referral', etc.
+  sourceLeadId         String?   @db.Text // ID from referring platform
+  locationState        String?   @db.Text // State/Province for regional tracking
 }
 
 model VerificationToken {
@@ -176,14 +180,16 @@ model ConsentRecord {
   id               String   @id @default(cuid())
   userId           String?
   phone            String   @db.Text
-  consentType      String   @db.Text // 'double_opt_in', 'opt_out'
+  consentType      String   @db.Text // 'double_opt_in', 'opt_out', 'partner_referral'
+  consentStatus    String?  @db.Text // 'pending', 'confirmed', 'revoked'
   consentLanguage  String   @db.Text // Exact message shown
   userResponse     String?  @db.Text
   language         String   @default("en")
-  channel          String   @db.Text // 'sms' or 'whatsapp'
+  channel          String   @db.Text // 'sms', 'whatsapp', 'partner_api'
   carrierName      String?  @db.Text
   twilioMessageSid String?  @db.Text
   ipAddress        String?  @db.Text
+  sourcePlatform   String?  @db.Text // 'businessos', etc.
   createdAt        DateTime @default(now())
   user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -256,6 +262,10 @@ model Lead {
   consentTimestamp DateTime?
   status           String    @default("captured") // 'captured', 'consented', 'distributed', 'declined', 'accepted'
   leadValue        Decimal?  @db.Decimal(10, 2)
+  // Partner referral tracking
+  sourcePlatform   String?   @db.Text // 'businessos', etc.
+  sourceLeadId     String?   @db.Text // Lead ID from referring platform
+  referralFee      Decimal?  @db.Decimal(10, 2) // Amount owed to partner
   // Vendor acceptance
   acceptedByVendorId String?  @db.Text
   acceptedAt        DateTime?
@@ -399,4 +409,23 @@ model ExperimentMetric {
 
   @@index([experimentId, variantId, metric])
   @@index([timestamp])
+}
+
+// Partner Payments - Track payments owed to partners for lead referrals
+model PartnerPayment {
+  id            String    @id @default(cuid())
+  partner       String    @db.Text // 'businessos', etc.
+  leadId        String    @db.Text
+  amount        Decimal   @db.Decimal(10, 2)
+  status        String    @default("pending") // 'pending', 'paid', 'disputed', 'cancelled'
+  dueDate       DateTime
+  paidAt        DateTime?
+  stripeTransferId String? @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([partner])
+  @@index([leadId])
+  @@index([status])
+  @@index([dueDate])
 }
