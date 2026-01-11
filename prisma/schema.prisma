@@ -81,9 +81,14 @@ model User {
   // Vendor relations
   vendor               Vendor?
   // Partner referral tracking
-  source               String?   @db.Text // 'organic', 'businessos_referral', etc.
-  sourceLeadId         String?   @db.Text // ID from referring platform
-  locationState        String?   @db.Text // State/Province for regional tracking
+  source               String?               @db.Text // 'organic', 'businessos_referral', etc.
+  sourceLeadId         String?               @db.Text // ID from referring platform
+  locationState        String?               @db.Text // State/Province for regional tracking
+  // Profile sharing relations
+  sharedProfiles       ProfileShare[]        @relation("ProfileOwner")
+  profileAccess        ProfileAccess[]
+  profileNotes         ProfileNote[]
+  profileFiles         ProfileFile[]
 }
 
 model VerificationToken {
@@ -238,41 +243,41 @@ model CapturedItem {
 }
 
 model Lead {
-  id               String    @id @default(cuid())
-  userId           String?
-  phoneHash        String    @db.Text
-  category         String    @db.Text // 'caregiver_hiring', 'telehealth', etc.
-  partnerName      String?   @db.Text
-  needDescription  String    @db.Text
-  leadDetails      Json? // JSONB for flexible structure
-  locationState    String?   @db.Text // Legacy field
+  id                 String    @id @default(cuid())
+  userId             String?
+  phoneHash          String    @db.Text
+  category           String    @db.Text // 'caregiver_hiring', 'telehealth', etc.
+  partnerName        String?   @db.Text
+  needDescription    String    @db.Text
+  leadDetails        Json? // JSONB for flexible structure
+  locationState      String?   @db.Text // Legacy field
   // Regional location data
-  country          String?   @db.Text // ISO country code (e.g., 'NG', 'US', 'GB')
-  countryName      String?   @db.Text // Full country name
-  region           String?   @db.Text // State/Province/Region
-  city             String?   @db.Text
-  latitude         Float?
-  longitude        Float?
-  timezone         String?   @db.Text
-  currency         String?   @db.Text // ISO currency code (e.g., 'NGN', 'USD', 'GBP')
-  budget           Decimal?  @db.Decimal(10, 2) // User's budget in their currency
-  budgetUSD        Decimal?  @db.Decimal(10, 2) // Budget converted to USD
-  urgency          String?   @db.Text
-  consentGiven     Boolean   @default(false)
-  consentTimestamp DateTime?
-  status           String    @default("captured") // 'captured', 'consented', 'distributed', 'declined', 'accepted'
-  leadValue        Decimal?  @db.Decimal(10, 2)
+  country            String?   @db.Text // ISO country code (e.g., 'NG', 'US', 'GB')
+  countryName        String?   @db.Text // Full country name
+  region             String?   @db.Text // State/Province/Region
+  city               String?   @db.Text
+  latitude           Float?
+  longitude          Float?
+  timezone           String?   @db.Text
+  currency           String?   @db.Text // ISO currency code (e.g., 'NGN', 'USD', 'GBP')
+  budget             Decimal?  @db.Decimal(10, 2) // User's budget in their currency
+  budgetUSD          Decimal?  @db.Decimal(10, 2) // Budget converted to USD
+  urgency            String?   @db.Text
+  consentGiven       Boolean   @default(false)
+  consentTimestamp   DateTime?
+  status             String    @default("captured") // 'captured', 'consented', 'distributed', 'declined', 'accepted'
+  leadValue          Decimal?  @db.Decimal(10, 2)
   // Partner referral tracking
-  sourcePlatform   String?   @db.Text // 'businessos', etc.
-  sourceLeadId     String?   @db.Text // Lead ID from referring platform
-  referralFee      Decimal?  @db.Decimal(10, 2) // Amount owed to partner
+  sourcePlatform     String?   @db.Text // 'businessos', etc.
+  sourceLeadId       String?   @db.Text // Lead ID from referring platform
+  referralFee        Decimal?  @db.Decimal(10, 2) // Amount owed to partner
   // Vendor acceptance
-  acceptedByVendorId String?  @db.Text
-  acceptedAt        DateTime?
-  calendarInviteUrl String?   @db.Text
+  acceptedByVendorId String?   @db.Text
+  acceptedAt         DateTime?
+  calendarInviteUrl  String?   @db.Text
   meetingScheduledAt DateTime?
-  createdAt        DateTime  @default(now())
-  user             User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt          DateTime  @default(now())
+  user               User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([category])
@@ -286,37 +291,37 @@ model Lead {
 }
 
 model Vendor {
-  id                String   @id @default(cuid())
-  userId            String   @unique // Vendor account (User)
-  businessName      String   @db.Text
-  description       String?  @db.Text
-  category          String   @db.Text // 'caregiver_hiring', 'telehealth', 'medical_equipment', etc.
-  subscriptionTier  String   @default("free") // 'free', 'basic', 'premium', 'enterprise'
-  verified          Boolean  @default(false)
-  rating            Float?   @default(0)
-  totalLeads        Int      @default(0)
-  acceptedLeads     Int      @default(0)
-  email             String?  @db.Text
-  phone             String?  @db.Text
-  website           String?  @db.Text
-  calendarUrl       String?  @db.Text // Google Calendar, Calendly, etc.
+  id               String   @id @default(cuid())
+  userId           String   @unique // Vendor account (User)
+  businessName     String   @db.Text
+  description      String?  @db.Text
+  category         String   @db.Text // 'caregiver_hiring', 'telehealth', 'medical_equipment', etc.
+  subscriptionTier String   @default("free") // 'free', 'basic', 'premium', 'enterprise'
+  verified         Boolean  @default(false)
+  rating           Float?   @default(0)
+  totalLeads       Int      @default(0)
+  acceptedLeads    Int      @default(0)
+  email            String?  @db.Text
+  phone            String?  @db.Text
+  website          String?  @db.Text
+  calendarUrl      String?  @db.Text // Google Calendar, Calendly, etc.
   // Regional location data
-  country           String?  @db.Text // ISO country code
-  countryName       String?  @db.Text
-  region            String?  @db.Text // State/Province/Region
-  city              String?  @db.Text
-  address           String?  @db.Text
-  latitude          Float?
-  longitude         Float?
-  timezone          String?  @db.Text
-  currency          String?  @db.Text // ISO currency code
-  serviceRadius     Int?     // Service radius in kilometers (null = global)
-  serviceCountries  String[] @default([]) // Array of country codes they serve
-  minBudget         Decimal? @db.Decimal(10, 2) // Minimum budget they accept
-  maxBudget         Decimal? @db.Decimal(10, 2) // Maximum budget they handle
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  country          String?  @db.Text // ISO country code
+  countryName      String?  @db.Text
+  region           String?  @db.Text // State/Province/Region
+  city             String?  @db.Text
+  address          String?  @db.Text
+  latitude         Float?
+  longitude        Float?
+  timezone         String?  @db.Text
+  currency         String?  @db.Text // ISO currency code
+  serviceRadius    Int? // Service radius in kilometers (null = global)
+  serviceCountries String[] @default([]) // Array of country codes they serve
+  minBudget        Decimal? @db.Decimal(10, 2) // Minimum budget they accept
+  maxBudget        Decimal? @db.Decimal(10, 2) // Maximum budget they handle
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([category])
   @@index([subscriptionTier])
@@ -353,17 +358,17 @@ model UnmatchedDemand {
 // Advanced Features Models
 
 model VoiceCall {
-  id                String   @id @default(cuid())
-  phone             String   @db.Text
-  callSid           String   @unique @db.Text
-  type              String   @db.Text // 'otp', 'notification', 'reminder'
-  language          String   @default("en")
-  status            String   @default("initiated") // 'initiated', 'ringing', 'in-progress', 'completed', 'busy', 'failed', 'no-answer'
-  answeredBy        String?  @db.Text // 'human', 'machine_start', 'machine_end_beep'
-  voicemailDetected Boolean  @default(false)
-  duration          Int?     // seconds
-  cost              Decimal? @db.Decimal(10, 6)
-  createdAt         DateTime @default(now())
+  id                String    @id @default(cuid())
+  phone             String    @db.Text
+  callSid           String    @unique @db.Text
+  type              String    @db.Text // 'otp', 'notification', 'reminder'
+  language          String    @default("en")
+  status            String    @default("initiated") // 'initiated', 'ringing', 'in-progress', 'completed', 'busy', 'failed', 'no-answer'
+  answeredBy        String?   @db.Text // 'human', 'machine_start', 'machine_end_beep'
+  voicemailDetected Boolean   @default(false)
+  duration          Int? // seconds
+  cost              Decimal?  @db.Decimal(10, 6)
+  createdAt         DateTime  @default(now())
   completedAt       DateTime?
 
   @@index([phone])
@@ -372,24 +377,24 @@ model VoiceCall {
 }
 
 model Experiment {
-  id        String   @id @default(cuid())
-  name      String   @db.Text
-  status    String   @default("draft") // 'draft', 'running', 'paused', 'completed'
-  config    Json     // Experiment configuration
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String                 @id @default(cuid())
+  name        String                 @db.Text
+  status      String                 @default("draft") // 'draft', 'running', 'paused', 'completed'
+  config      Json // Experiment configuration
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
   assignments ExperimentAssignment[]
-  metrics   ExperimentMetric[]
+  metrics     ExperimentMetric[]
 
   @@index([status])
 }
 
 model ExperimentAssignment {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   experimentId String
-  userId       String   @db.Text
-  variantId    String   @db.Text
-  assignedAt   DateTime @default(now())
+  userId       String     @db.Text
+  variantId    String     @db.Text
+  assignedAt   DateTime   @default(now())
   experiment   Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
 
   @@unique([experimentId, userId])
@@ -398,13 +403,13 @@ model ExperimentAssignment {
 }
 
 model ExperimentMetric {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   experimentId String
-  variantId    String   @db.Text
-  userId       String?  @db.Text
-  metric       String   @db.Text
-  value        Float    @default(1)
-  timestamp    DateTime @default(now())
+  variantId    String     @db.Text
+  userId       String?    @db.Text
+  metric       String     @db.Text
+  value        Float      @default(1)
+  timestamp    DateTime   @default(now())
   experiment   Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
 
   @@index([experimentId, variantId, metric])
@@ -413,19 +418,169 @@ model ExperimentMetric {
 
 // Partner Payments - Track payments owed to partners for lead referrals
 model PartnerPayment {
-  id            String    @id @default(cuid())
-  partner       String    @db.Text // 'businessos', etc.
-  leadId        String    @db.Text
-  amount        Decimal   @db.Decimal(10, 2)
-  status        String    @default("pending") // 'pending', 'paid', 'disputed', 'cancelled'
-  dueDate       DateTime
-  paidAt        DateTime?
-  stripeTransferId String? @db.Text
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  partner          String    @db.Text // 'businessos', etc.
+  leadId           String    @db.Text
+  amount           Decimal   @db.Decimal(10, 2)
+  status           String    @default("pending") // 'pending', 'paid', 'disputed', 'cancelled'
+  dueDate          DateTime
+  paidAt           DateTime?
+  stripeTransferId String?   @db.Text
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@index([partner])
   @@index([leadId])
   @@index([status])
   @@index([dueDate])
+}
+
+// Profile Sharing Models
+
+model ProfileShare {
+  id             String             @id @default(cuid())
+  profileOwnerId String             @db.Text // User whose profile is being shared
+  shareToken     String             @unique @db.Text // Unique token for deep link
+  shareType      String             @db.Text // 'family', 'friend', 'medical_team', 'public'
+  title          String?            @db.Text // Optional title for the share
+  description    String?            @db.Text // Optional description
+  expiresAt      DateTime? // Optional expiration
+  allowNotes     Boolean            @default(false) // Medical teams can log notes
+  allowFiles     Boolean            @default(false) // Medical teams can upload files
+  allowViewOnly  Boolean            @default(true) // View-only access
+  isActive       Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  owner          User               @relation("ProfileOwner", fields: [profileOwnerId], references: [id], onDelete: Cascade)
+  accesses       ProfileAccess[]
+  accessLogs     ProfileAccessLog[]
+  notes          ProfileNote[]
+  files          ProfileFile[]
+  auditLogs      ProfileAuditLog[]
+
+  @@index([profileOwnerId])
+  @@index([shareToken])
+  @@index([shareType])
+  @@index([isActive])
+  @@index([expiresAt])
+}
+
+model ProfileAccess {
+  id             String        @id @default(cuid())
+  shareId        String
+  userId         String?       @db.Text // User who has access (null for unregistered users)
+  email          String?       @db.Text // Email of invitee (for tracking)
+  name           String?       @db.Text // Name of invitee
+  role           String        @db.Text // 'family', 'friend', 'medical_professional', 'viewer'
+  organization   String?       @db.Text // Medical organization name
+  licenseNumber  String?       @db.Text // Medical license number
+  permissions    Json? // Custom permissions object
+  invitedBy      String        @db.Text // User ID who created the share
+  invitedAt      DateTime      @default(now())
+  acceptedAt     DateTime? // When they first accessed
+  lastAccessedAt DateTime?
+  isActive       Boolean       @default(true)
+  share          ProfileShare  @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  notes          ProfileNote[]
+  files          ProfileFile[]
+
+  @@unique([shareId, userId])
+  @@unique([shareId, email])
+  @@index([shareId])
+  @@index([userId])
+  @@index([email])
+  @@index([isActive])
+}
+
+model ProfileAccessLog {
+  id         String       @id @default(cuid())
+  shareId    String
+  accessId   String? // ProfileAccess ID (if registered user)
+  userId     String?      @db.Text // User ID if registered
+  email      String?      @db.Text // Email if unregistered
+  ipAddress  String?      @db.Text
+  userAgent  String?      @db.Text
+  action     String       @db.Text // 'view', 'download', 'note_added', 'file_uploaded'
+  accessedAt DateTime     @default(now())
+  share      ProfileShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
+
+  @@index([shareId])
+  @@index([accessId])
+  @@index([userId])
+  @@index([accessedAt])
+  @@index([action])
+}
+
+model ProfileNote {
+  id        String        @id @default(cuid())
+  shareId   String
+  accessId  String // ProfileAccess ID (who added the note)
+  userId    String?       @db.Text // User ID if registered
+  title     String        @db.Text
+  content   String        @db.Text
+  category  String?       @db.Text // 'medical', 'general', 'medication', 'appointment', etc.
+  tags      String[]      @default([])
+  isPrivate Boolean       @default(false) // Only visible to medical team
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  share     ProfileShare  @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  access    ProfileAccess @relation(fields: [accessId], references: [id], onDelete: Cascade)
+  User      User?         @relation(fields: [userId], references: [id])
+
+  @@index([shareId])
+  @@index([accessId])
+  @@index([userId])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model ProfileFile {
+  id          String        @id @default(cuid())
+  shareId     String
+  accessId    String // ProfileAccess ID (who uploaded)
+  userId      String?       @db.Text // User ID if registered
+  fileName    String        @db.Text
+  fileType    String        @db.Text // 'image', 'pdf', 'document', 'lab_result', etc.
+  fileSize    Int // Bytes
+  fileUrl     String        @db.Text // S3/Storage URL
+  mimeType    String?       @db.Text
+  description String?       @db.Text
+  category    String?       @db.Text // 'lab_result', 'prescription', 'xray', 'medical_record', etc.
+  tags        String[]      @default([])
+  isPrivate   Boolean       @default(false) // Only visible to medical team
+  uploadedAt  DateTime      @default(now())
+  share       ProfileShare  @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  access      ProfileAccess @relation(fields: [accessId], references: [id], onDelete: Cascade)
+  User        User?         @relation(fields: [userId], references: [id])
+
+  @@index([shareId])
+  @@index([accessId])
+  @@index([userId])
+  @@index([category])
+  @@index([uploadedAt])
+}
+
+model ProfileAuditLog {
+  id         String       @id @default(cuid())
+  shareId    String
+  accessId   String? // ProfileAccess ID (who made the change)
+  userId     String?      @db.Text // User ID if registered
+  action     String       @db.Text // 'note_added', 'note_updated', 'note_deleted', 'file_uploaded', 'file_deleted', 'access_granted', 'access_revoked', 'permission_changed'
+  entityType String       @db.Text // 'note', 'file', 'access', 'share'
+  entityId   String?      @db.Text // ID of the entity that changed
+  oldValue   Json? // Previous value (for updates)
+  newValue   Json? // New value (for updates)
+  metadata   Json? // Additional context
+  timestamp  DateTime     @default(now())
+  ipAddress  String?      @db.Text
+  userAgent  String?      @db.Text
+  share      ProfileShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
+
+  @@index([shareId])
+  @@index([accessId])
+  @@index([userId])
+  @@index([action])
+  @@index([entityType])
+  @@index([timestamp])
 }

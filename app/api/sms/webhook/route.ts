@@ -16,6 +16,7 @@ import { detectLanguage as detectLanguageAdvanced } from '@/lib/language-detecti
 import { generateMultilingualResponse } from '@/lib/multilingual-ai';
 import { extractLocation, extractBudgetFromText } from '@/lib/location-extraction';
 import { matchVendorsToLead } from '@/lib/geographic-matching';
+import { classifyWithHealthCorrelation } from '@/lib/health-correlation';
 
 /**
  * Twilio webhook handler for incoming SMS/WhatsApp messages
@@ -197,16 +198,149 @@ export async function POST(req: NextRequest) {
       return new NextResponse('', { status: 200 });
     }
 
-    // Active user - classify and respond with multilingual AI
-    const aiResponse = await generateMultilingualResponse(message, {
-      userName: user.name,
-      language: user.language,
-    });
+    // Active user - classify and respond with health correlation if health-related
+    // Check if message is health-related to use correlation engine
+    const healthKeywords = [
+      // General symptoms
+      'hurt', 'pain', 'ache', 'headache', 'nausea', 'dizzy', 'fever',
+      'pressure', 'blood', 'symptom', 'feeling', 'unwell', 'sick',
+      'tired', 'weak', 'breath', 'chest', 'stomach', 'back',
+      // Food-related symptoms
+      'food', 'eat', 'eating', 'meal', 'ate', 'consumed', 'drank',
+      'allergic', 'allergy', 'intolerant', 'intolerance',
+      'vomit', 'vomiting', 'throw up', 'diarrhea', 'constipation',
+      'bloating', 'gas', 'cramp', 'cramps', 'indigestion',
+      'heartburn', 'reflux', 'upset stomach', 'stomachache',
+      'food poisoning', 'poisoning', 'digestive', 'digestion',
+      'gluten', 'dairy', 'lactose', 'peanut', 'shellfish', 'seafood',
+      'ibs', 'celiac', 'gerd',
+    ];
     
-    const classification = {
-      ...aiResponse.classification,
-      response: aiResponse.response,
-    };
+    const isHealthRelated = healthKeywords.some(keyword => 
+      message.toLowerCase().includes(keyword)
+    );
+
+    let classification: any;
+    let aiResponse: any;
+
+    if (isHealthRelated) {
+      // Use health correlation for context-aware responses
+      const correlatedResponse = await classifyWithHealthCorrelation(
+        message,
+        user.id,
+        user.name,
+        user.language
+      );
+      
+      classification = {
+        category: correlatedResponse.category,
+        title: correlatedResponse.title,
+        details: correlatedResponse.details,
+        urgency: correlatedResponse.urgency,
+        response: correlatedResponse.response,
+        person: null,
+        canCareOSHelp: true,
+        careosFeature: 'health_tracking',
+        upsellOpportunity: null,
+        correlations: correlatedResponse.correlations,
+        suggestedChecks: correlatedResponse.suggestedChecks,
+        suggestedActions: correlatedResponse.suggestedActions,
+        isLeadOpportunity: false,
+        leadCategory: null,
+        leadPartner: null,
+        askConsent: false,
+      };
+      
+      // Enhance response with correlations if any
+      if (correlatedResponse.correlations.length > 0) {
+        const correlationNote = correlatedResponse.correlations[0];
+        
+        // Build response with correlation
+        let enhancedResponse = correlatedResponse.response;
+        
+        // If response doesn't already include correlation, add it
+        if (!enhancedResponse.includes(correlationNote.possibleConnection)) {
+          enhancedResponse = `${correlatedResponse.response}\n\n${correlationNote.possibleConnection}\n\nSuggested: ${correlationNote.suggestedAction}`;
+        }
+        
+        // Add suggested checks if any
+        if (correlatedResponse.suggestedChecks.length > 0 && !enhancedResponse.includes('checking')) {
+          enhancedResponse += `\n\nConsider checking: ${correlatedResponse.suggestedChecks.join(', ')}`;
+        }
+        
+        // Add pattern information if detected
+        if (correlatedResponse.isPatternDetected && correlatedResponse.patternInfo) {
+          enhancedResponse += `\n\n${correlatedResponse.patternInfo}`;
+        }
+        
+        // Ensure logging confirmation and empathetic closing
+        const lowerResponse = enhancedResponse.toLowerCase();
+        if (!lowerResponse.includes('noted') && !lowerResponse.includes('tracked')) {
+          const closingPhrases: Record<string, string> = {
+            en: '\n\nThis has been noted in your profile for tracking to help identify any patterns over time. Feel better!',
+            es: '\n\nEsto ha sido anotado en tu perfil para seguimiento. ¡Mejórate pronto!',
+            fr: '\n\nCela a été noté dans votre profil pour suivi. Prenez soin de vous!',
+            de: '\n\nDies wurde in Ihrem Profil zur Verfolgung notiert. Gute Besserung!',
+          };
+          enhancedResponse += closingPhrases[user.language] || closingPhrases.en;
+        }
+        
+        classification.response = enhancedResponse;
+      } else {
+        // No correlations but still add confirmation and closing
+        const lowerResponse = correlatedResponse.response.toLowerCase();
+        if (!lowerResponse.includes('noted') && !lowerResponse.includes('tracked')) {
+          const closingPhrases: Record<string, string> = {
+            en: '\n\nThis has been noted in your profile for tracking. Feel better!',
+            es: '\n\nEsto ha sido anotado en tu perfil. ¡Mejórate pronto!',
+            fr: '\n\nCela a été noté dans votre profil. Prenez soin de vous!',
+            de: '\n\nDies wurde in Ihrem Profil notiert. Gute Besserung!',
+          };
+          classification.response = `${correlatedResponse.response}${closingPhrases[user.language] || closingPhrases.en}`;
+        } else {
+          classification.response = correlatedResponse.response;
+        }
+      }
+    } else {
+      // Use standard multilingual AI for non-health messages
+      aiResponse = await generateMultilingualResponse(message, {
+        userName: user.name,
+        language: user.language,
+      });
+      
+      classification = {
+        ...aiResponse.classification,
+        response: aiResponse.response,
+      };
+    }
+
+    // Build details with correlation information if available
+    let capturedDetails = classification.details || message;
+    if (classification.correlations && classification.correlations.length > 0) {
+      const correlationDetails = classification.correlations.map(corr => 
+        `${corr.currentSymptom} → ${corr.relatedHistory}: ${corr.possibleConnection}`
+      ).join(' | ');
+      capturedDetails = `${capturedDetails}\n\nCorrelations: ${correlationDetails}`;
+      
+      // Add suggested checks and actions
+      if (classification.suggestedChecks && classification.suggestedChecks.length > 0) {
+        capturedDetails += `\n\nSuggested checks: ${classification.suggestedChecks.join(', ')}`;
+      }
+      if (classification.suggestedActions && classification.suggestedActions.length > 0) {
+        capturedDetails += `\n\nSuggested actions: ${classification.suggestedActions.join(', ')}`;
+      }
+    }
+    
+    // Add pattern information if detected
+    if (classification.isPatternDetected && classification.patternInfo) {
+      capturedDetails += `\n\n⚠️ Pattern detected: ${classification.patternInfo}`;
+      capturedDetails += `\n\nThis symptom is being tracked to identify if it's part of a larger recurring issue.`;
+    }
+    
+    // Always note that it's logged for tracking
+    if (!capturedDetails.toLowerCase().includes('tracked') && !capturedDetails.toLowerCase().includes('logged')) {
+      capturedDetails += `\n\n✓ Logged in profile for pattern tracking`;
+    }
 
     // Store captured item
     await prisma.capturedItem.create({
@@ -214,9 +348,9 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         category: classification.category,
         title: classification.title,
-        details: classification.details,
+        details: capturedDetails,
         person: classification.person || undefined,
-        urgency: classification.urgency,
+        urgency: classification.urgency || 'low',
         originalText: message,
         language: user.language,
         source: channel,

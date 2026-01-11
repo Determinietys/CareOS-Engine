@@ -201,6 +201,38 @@ export const RATE_LIMITS = {
       return req.ip || req.headers.get('x-forwarded-for') || 'unknown';
     },
   },
+
+  // File upload rate limiting
+  fileUpload: {
+    interval: 60, // 1 minute
+    limit: 10, // 10 uploads per minute per user
+    identifier: (req: NextRequest) => {
+      // Try to get user ID from session
+      // In a real implementation, extract from auth token
+      const authHeader = req.headers.get('authorization');
+      if (authHeader) {
+        // Extract user ID from token (simplified)
+        return `upload:${authHeader.slice(0, 20)}`;
+      }
+      // Fallback to IP
+      return `upload:${req.ip || req.headers.get('x-forwarded-for') || 'unknown'}`;
+    },
+  },
+
+  // Per-share file upload limit
+  shareFileUpload: {
+    interval: 3600, // 1 hour
+    limit: 50, // 50 uploads per hour per share
+    identifier: (req: NextRequest) => {
+      // Extract share ID from URL
+      const url = new URL(req.url);
+      const match = url.pathname.match(/\/profile\/([^/]+)\/files/);
+      if (match) {
+        return `share:${match[1]}`;
+      }
+      return `share:${req.ip || req.headers.get('x-forwarded-for') || 'unknown'}`;
+    },
+  },
 };
 
 /**

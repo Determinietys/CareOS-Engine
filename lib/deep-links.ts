@@ -54,3 +54,28 @@ export function generateTelegramDeepLink(username: string, message?: string): st
   return `https://t.me/${username.replace('@', '')}${encodedMessage ? `?text=${encodedMessage}` : ''}`;
 }
 
+/**
+ * Generate CareOS profile share deep link
+ * Supports both mobile app (careos://) and web (https://)
+ */
+export function generateProfileShareLink(shareToken: string, platform?: Platform): string {
+  const detectedPlatform = platform || detectPlatform();
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://careos.app';
+  
+  // Mobile apps use custom URL scheme
+  if (detectedPlatform === 'ios' || detectedPlatform === 'android') {
+    return `careos://profile/${shareToken}`;
+  }
+  
+  // Web uses HTTPS
+  return `${baseUrl}/profile/${shareToken}`;
+}
+
+/**
+ * Generate shareable profile link (universal - works on all platforms)
+ */
+export function generateUniversalProfileLink(shareToken: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://careos.app';
+  return `${baseUrl}/profile/${shareToken}`;
+}
+
